@@ -1,5 +1,6 @@
 package dev.nicktriano.model_selector_demo.model_selector;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -12,7 +13,7 @@ import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.catalog.ModelType;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:3000")
 public class ModelSelectorController {
   
   private final ModelSelectorService modelSelectorService;
@@ -23,8 +24,14 @@ public class ModelSelectorController {
 
   @GetMapping("/catalog")
   public List<ModelDescription> getModelCatalog() {
-    System.out.println(modelSelectorService.getOpenAiModels());
-    return modelSelectorService.getOpenAiModels();
+    List<ModelDescription> models = new ArrayList<>();
+    List<ModelDescription> openAiModels = modelSelectorService.getOpenAiModels();
+    List<ModelDescription> anthropicModels = modelSelectorService.getAnthropicModels();
+    
+    models.addAll(openAiModels);
+    models.addAll(anthropicModels);
+
+    return models;
   }
 
   @GetMapping("/catalog/chat-only")

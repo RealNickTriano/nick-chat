@@ -61,6 +61,24 @@
 
     <dependency>
       <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-anthropic</artifactId>
+      <version>1.13.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-google-ai-gemini</artifactId>
+      <version>1.13.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-mistral-ai</artifactId>
+      <version>1.13.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
       <artifactId>langchain4j-spring-boot4-starter</artifactId>
       <version>1.13.0-beta23</version>
     </dependency>

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import ch.qos.logback.classic.Level;
+import dev.langchain4j.model.anthropic.AnthropicModelCatalog;
 import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.catalog.ModelType;
 import dev.langchain4j.model.openai.OpenAiModelCatalog;
@@ -21,12 +22,24 @@ public class ModelSelectorService {
 
   private final OpenAiModelCatalog openAiModelCatalog;
 
-  public ModelSelectorService(@Value("${app.openai.key}") String openAiApiKey) {
+  private final AnthropicModelCatalog anthropicModelCatalog;
+
+  public ModelSelectorService(
+    @Value("${app.openai.key}") String openAiApiKey,
+    @Value("${app.anthropic.key}") String anthropicApiKey
+  ) {
     logger.info("Loading Open AI API Key...");
     this.openAiModelCatalog = new OpenAiModelCatalog.Builder()
       .logRequests(true)
       .logResponses(true)
       .apiKey(openAiApiKey)
+      .build();
+
+    logger.info("Loading Anthropic API Key...");
+    this.anthropicModelCatalog = new AnthropicModelCatalog.Builder()
+      .logRequests(true)
+      .logResponses(true)
+      .apiKey(anthropicApiKey)
       .build();
   }
 
@@ -39,5 +52,9 @@ public class ModelSelectorService {
       .stream()
       .filter(filterFunc)
       .toList();
+  }
+
+  public List<ModelDescription> getAnthropicModels() {
+    return anthropicModelCatalog.listModels();
   }
 }
