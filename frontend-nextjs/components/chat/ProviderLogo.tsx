@@ -15,7 +15,7 @@ export function ProviderLogo({ provider, className }: ProviderLogoProps) {
     case "ANTHROPIC":
       return (
         <AnthropicLogo
-          className={className ?? "h-5 w-auto text-neutral-900 dark:text-neutral-100"}
+          className={className ?? "px-4 h-5 w-auto text-neutral-900 dark:text-neutral-100"}
           aria-label={label}
         />
       );

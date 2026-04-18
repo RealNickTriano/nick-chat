@@ -33,8 +33,11 @@ export function ProviderSection({
         aria-controls={sectionId}
         className="flex cursor-pointer items-center justify-between rounded-md py-1 text-left transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none dark:hover:bg-neutral-900 dark:focus-visible:bg-neutral-900"
       >
-        <div className="flex h-12 items-center">
+        <div className="flex h-12 items-center gap-3">
           <ProviderLogo provider={provider} />
+          <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+            {models.length}
+          </span>
         </div>
         <ChevronDownIcon
           className={`mr-2 h-5 w-5 text-neutral-500 transition-transform duration-300 ease-out dark:text-neutral-400 ${
