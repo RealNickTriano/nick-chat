@@ -44,6 +44,18 @@ Do not create `utils.ts` dumping grounds. If a helper has no clear home, it prob
 - **Design tokens, not raw values.** Reference semantic tokens (`bg-surface`, `text-muted`) rather than palette values (`bg-zinc-900`). This keeps dark/light theming trivial.
 - **Theming via `data-theme` or `class` on `<html>`.** Respect `prefers-color-scheme` by default; allow manual override persisted to local storage. Avoid flashes of unstyled theme by setting the initial class in a blocking inline script in `layout.tsx`.
 
+## Icons and SVGs
+
+- **Every custom SVG lives in its own file under `components/svg/`.** Never inline `<svg>` markup in a feature component. Naming is by shape/concept (`ArrowRight.tsx`, `ChevronDown.tsx`, `Check.tsx`), not by where it's used (`SendButtonArrow.tsx` is wrong).
+- Each icon is a stateless component that spreads `SVGProps<SVGSVGElement>` onto the root `<svg>` and defaults `aria-hidden="true"`. Consumers override size/color via `className` or props.
+- This keeps icon styling locatable, re-use trivial, and feature components free of visual clutter.
+
+## File naming
+
+- **Component files are PascalCase** and match the exported component name: `Composer.tsx`, `ModelSelector.tsx`, `ArrowRight.tsx`. One component per file (plus closely-related sub-types).
+- **Non-component TS files are kebab-case**: `models.ts`, `use-chat-stream.ts`, `http-client.ts`.
+- **Route files follow Next.js conventions** (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`) — these are lowercase by framework requirement, not by our convention.
+
 ## Components
 
 - **Small and composable.** A component should do one thing. If a file exceeds ~200 lines, it's probably two components.
