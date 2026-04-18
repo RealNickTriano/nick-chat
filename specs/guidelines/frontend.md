@@ -8,7 +8,8 @@ Guidelines for the `frontend-nextjs/` app. The stack is Next.js 16, React 19, Ty
 
 - `app/` — routes, layouts, and route-local UI. Colocate route-specific components, loading/error states, and server actions inside the route directory.
 - `components/` — reusable UI primitives and composite components shared across routes. Split into `components/ui/` (unstyled primitives, design-system atoms) and `components/chat/`, `components/sidebar/`, etc. (feature clusters).
-- `lib/` — non-UI code: API clients, provider adapters, storage helpers, utilities, types.
+- `lib/` — non-UI code: API clients, provider adapters, storage helpers, utilities. **No type-only files here** — those live in `types/`.
+- `types/` — all shared TypeScript types and interfaces. One file per domain (`model.ts`, `chat.ts`, `provider.ts`). Types only — no runtime values, no functions. If a type is only consumed by a single component or function, define it inline at the call site instead of adding it here.
 - `hooks/` — reusable React hooks. One hook per file, named `use-*.ts`.
 - `styles/` — global CSS, Tailwind layer extensions. Keep this directory thin; prefer Tailwind utilities in components.
 - `public/` — static assets only.

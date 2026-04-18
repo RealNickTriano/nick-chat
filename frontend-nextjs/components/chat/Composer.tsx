@@ -2,22 +2,20 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
-import { DEFAULT_MODEL_ID, MODELS, type ModelId } from "@/lib/models";
 import { ModelSelector } from "./ModelSelector";
 import { SendButton } from "./SendButton";
 
 interface ComposerProps {
-  onSubmit: (payload: { text: string; model: ModelId }) => void;
+  onSubmit: (payload: { text: string; model: string }) => void;
   disabled?: boolean;
-  initialModel?: ModelId;
   placeholder?: string;
 }
 
 const MAX_ROWS = 10;
 
-export function Composer({ onSubmit, disabled, initialModel, placeholder }: ComposerProps) {
+export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
   const [text, setText] = useState("");
-  const [model, setModel] = useState<ModelId>(initialModel ?? DEFAULT_MODEL_ID);
+  const [model, setModel] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize: reset to auto, then clamp to MAX_ROWS worth of line-height.
@@ -32,10 +30,10 @@ export function Composer({ onSubmit, disabled, initialModel, placeholder }: Comp
     el.scrollTo({ top: el.scrollHeight });
   }, [text]);
 
-  const canSubmit = text.trim().length > 0 && !disabled;
+  const canSubmit = text.trim().length > 0 && !disabled && model !== null;
 
   const submit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || model === null) return;
     onSubmit({ text: text.trim(), model });
     setText("");
     textareaRef.current?.focus();
@@ -65,7 +63,7 @@ export function Composer({ onSubmit, disabled, initialModel, placeholder }: Comp
         className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-base leading-6 text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
       />
       <div className="flex items-center justify-between border-t border-neutral-200 px-2 py-2 dark:border-neutral-800">
-        <ModelSelector value={model} onChange={setModel} models={MODELS} />
+        <ModelSelector value={model} onChange={setModel} />
         <SendButton onClick={submit} disabled={!canSubmit} />
       </div>
     </div>

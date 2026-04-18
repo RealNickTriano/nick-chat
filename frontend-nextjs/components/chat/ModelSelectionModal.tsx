@@ -1,50 +1,36 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Model, ModelId } from "@/lib/models";
-import { CheckIcon } from "@/components/svg/Check";
+import { useModelCatalog } from "@/lib/catalog";
+import type { Model, ProviderId } from "@/types/model";
 import { ModelSelectorCloseButton } from "./ModelSelectorCloseButton";
+import { ProviderSection } from "./ProviderSection";
 
 interface ModelSelectionModalProps {
   open: boolean;
   onClose: () => void;
-  value: ModelId;
-  onPick: (id: ModelId) => void;
-  models: Model[];
+  value: string | null;
+  onPick: (id: string) => void;
 }
 
 interface ProviderGroup {
-  provider: string;
-  label: string;
+  provider: ProviderId;
   models: Model[];
 }
 
 function groupByProvider(models: Model[]): ProviderGroup[] {
-  const groups = new Map<string, ProviderGroup>();
+  const groups = new Map<ProviderId, Model[]>();
   for (const m of models) {
-    const existing = groups.get(m.provider);
-    if (existing) {
-      existing.models.push(m);
-    } else {
-      groups.set(m.provider, {
-        provider: m.provider,
-        label: m.providerLabel,
-        models: [m],
-      });
-    }
+    const list = groups.get(m.provider);
+    if (list) list.push(m);
+    else groups.set(m.provider, [m]);
   }
-  return Array.from(groups.values());
+  return Array.from(groups, ([provider, models]) => ({ provider, models }));
 }
 
-export function ModelSelectionModal({
-  open,
-  onClose,
-  value,
-  onPick,
-  models,
-}: ModelSelectionModalProps) {
+export function ModelSelectionModal({ open, onClose, value, onPick }: ModelSelectionModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const groups = groupByProvider(models);
+  const { status, models, error, refetch } = useModelCatalog();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -60,46 +46,84 @@ export function ModelSelectionModal({
     if (e.target === dialogRef.current) onClose();
   };
 
+  const groups = status === "ready" ? groupByProvider(models) : [];
+
   return (
     <dialog
       ref={dialogRef}
       onClose={onClose}
       onClick={handleBackdropClick}
       aria-label="Select a model"
-      className="m-auto w-full max-w-md rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl backdrop:bg-black/10 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
+      className="m-auto w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl backdrop:bg-black/10 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
     >
       <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
         <h2 className="text-sm font-medium">Select a model</h2>
         <ModelSelectorCloseButton onClick={onClose} />
       </div>
 
-      <ul className="max-h-96 overflow-y-auto py-2">
-        {groups.map((g) => (
-          <li key={g.provider}>
-            <div className="px-4 pt-2 pb-1 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              {g.label}
-            </div>
-            <ul>
-              {g.models.map((m) => {
-                const isSelected = m.id === value;
-                return (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      onClick={() => onPick(m.id)}
-                      aria-current={isSelected ? "true" : undefined}
-                      className="flex w-full items-center justify-between px-4 py-2 text-left text-sm transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none aria-[current=true]:bg-neutral-100 aria-[current=true]:font-medium dark:hover:bg-neutral-800 dark:focus-visible:bg-neutral-800 dark:aria-[current=true]:bg-neutral-800"
-                    >
-                      <span>{m.label}</span>
-                      {isSelected && <CheckIcon />}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </li>
-        ))}
-      </ul>
+      <div className="max-h-112 overflow-y-auto p-4">
+        {status === "loading" && <SkeletonGrid />}
+        {status === "error" && (
+          <ErrorState message={error ?? "Failed to load models"} onRetry={refetch} />
+        )}
+        {status === "ready" && models.length === 0 && <EmptyState />}
+        {status === "ready" && models.length > 0 && (
+          <div className="flex flex-col gap-6">
+            {groups.map((g) => (
+              <ProviderSection
+                key={g.provider}
+                provider={g.provider}
+                models={g.models}
+                selectedId={value ?? ""}
+                onPick={onPick}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </dialog>
+  );
+}
+
+function SkeletonGrid() {
+  return (
+    <div className="flex flex-col gap-6">
+      {[0, 1].map((s) => (
+        <div key={s} className="flex flex-col gap-3">
+          <div className="h-5 w-24 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-16 animate-pulse rounded-lg border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+      <p className="text-sm text-neutral-700 dark:text-neutral-300">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="cursor-pointer rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-800 transition-colors hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:focus-visible:outline-white"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="py-12 text-center text-sm text-neutral-600 dark:text-neutral-400">
+      No models available.
+    </div>
   );
 }

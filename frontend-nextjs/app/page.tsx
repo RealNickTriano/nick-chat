@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import { Composer } from "@/components/chat/Composer";
-import type { ModelId } from "@/lib/models";
 
 interface SubmittedMessage {
   id: number;
   text: string;
-  model: ModelId;
+  model: string;
 }
 
 export default function Home() {
   const [messages, setMessages] = useState<SubmittedMessage[]>([]);
 
-  const handleSubmit = ({ text, model }: { text: string; model: ModelId }) => {
+  const handleSubmit = ({ text, model }: { text: string; model: string }) => {
     setMessages((prev) => [...prev, { id: prev.length + 1, text, model }]);
   };
 
