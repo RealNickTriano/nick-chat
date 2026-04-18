@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Pre-commit hook: runs eslint, prettier, and vitest for frontend-nextjs
+# when any file in that workspace is staged. To enable:
+#   git config core.hooksPath .githooks
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+WORKSPACE="frontend-nextjs"
+
+staged_in_workspace() {
+  git diff --cached --name-only --diff-filter=ACMR | grep -q "^${WORKSPACE}/" || return 1
+}
+
+if staged_in_workspace; then
+  echo "[pre-commit] Running checks for ${WORKSPACE}..."
+  cd "${REPO_ROOT}/${WORKSPACE}"
+
+  echo "[pre-commit] prettier --check"
+  npm run --silent format:check
+
+  echo "[pre-commit] eslint"
+  npm run --silent lint
+
+  echo "[pre-commit] vitest"
+  npm run --silent test
+
+  echo "[pre-commit] OK"
+fi
