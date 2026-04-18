@@ -5,4 +5,5 @@ export interface Model {
   label: string;
   provider: ProviderId;
   description: string | null;
+  createdAt: string | null;
 }

@@ -9,6 +9,7 @@ interface BackendModel {
   displayName: string;
   description: string | null;
   provider: ProviderId;
+  createdAt: string | null;
 }
 
 export type CatalogStatus = "loading" | "ready" | "error";
@@ -37,13 +38,14 @@ async function load(): Promise<Model[]> {
   if (inflight) return inflight;
 
   inflight = http
-    .get<BackendModel[]>("/catalog/chat-only")
+    .get<BackendModel[]>("/catalog")
     .then((res) => {
       cached = res.data.map((m) => ({
         id: m.name,
         label: m.displayName,
         provider: m.provider,
         description: m.description,
+        createdAt: m.createdAt,
       }));
       lastError = null;
       notify({ status: "ready", models: cached, error: null });
