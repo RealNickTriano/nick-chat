@@ -11,16 +11,16 @@ Get a streamed reply from the right model with the smallest reasonable surface a
 ## Shape
 
 ```
-┌────────────────────┐       POST /chat (SSE)        ┌────────────────────┐       provider SDK        ┌──────────┐
-│  Composer.onSubmit │ ────────────────────────────▶ │  ChatController    │ ────────────────────────▶ │ Provider │
-│  { text, model }   │ ◀──────────────────────────── │  (routes by model) │ ◀──────────────────────── │  (LC4j)  │
-└────────────────────┘   stream of token deltas      └────────────────────┘     stream of tokens      └──────────┘
-         │
-         ▼
+┌──────────────────────────┐    POST /chat (SSE)       ┌────────────────────────┐    provider SDK       ┌──────────┐
+│  Composer.onSubmit       │ ────────────────────────▶ │  ChatController        │ ────────────────────▶ │ Provider │
+│  { text, model, provider}│ ◀──────────────────────── │  (dispatches by        │ ◀──────────────────── │  (LC4j)  │
+└──────────────────────────┘  stream of token deltas   │   provider, validates  │   stream of tokens    └──────────┘
+         │                                             │   model)               │
+         ▼                                             └────────────────────────┘
    Conversation view appends the user message, then the streaming assistant message.
 ```
 
-The frontend never picks a provider — it sends a model id. The backend looks the model up and dispatches to the right provider client.
+The frontend sends both `provider` and `model` — the same pair it already has from `/catalog`. The backend uses `provider` to pick the client directly and validates `model` against that provider's catalog.
 
 ## Backend contract
 
@@ -30,6 +30,7 @@ The frontend never picks a provider — it sends a model id. The backend looks t
 - Request body:
   ```json
   {
+    "provider": "anthropic",
     "model": "claude-opus-4-7",
     "messages": [
       { "role": "user", "content": "Hello!" },
@@ -46,9 +47,9 @@ The frontend never picks a provider — it sends a model id. The backend looks t
 ### Server behavior
 
 - **Stateless.** Every request carries the full message history. The server does not remember prior turns.
-- **Provider resolution.** A `ChatService` maps `model` → provider client (LangChain4j `ChatLanguageModel` / `StreamingChatLanguageModel`). The same `ModelCatalog` that powers `/catalog` is the source of truth.
-- **One endpoint, all providers.** No `/chat/openai`, `/chat/anthropic` routes. Routing is server-side based on the model id.
-- **Validation.** If the model id isn't in the catalog, return HTTP 400 with a JSON error body — do not open the SSE stream.
+- **Provider dispatch.** A `ChatService` maps `provider` → provider client (LangChain4j `ChatLanguageModel` / `StreamingChatLanguageModel`) using the same per-provider catalogs that power `/catalog`. No unified model index — the client tells us which catalog to look in.
+- **One endpoint, all providers.** No `/chat/openai`, `/chat/anthropic` routes. Dispatch happens inside the controller.
+- **Validation.** If `provider` is unknown, or `model` isn't in that provider's catalog, return HTTP 400 with a JSON error body — do not open the SSE stream.
 - **Provider keys** live in `application.properties` (or env). Out of scope for this spec; just a precondition.
 - **CORS** stays scoped to the dev frontend origin, same as the catalog endpoints today.
 
@@ -64,7 +65,7 @@ The frontend never picks a provider — it sends a model id. The backend looks t
 
 ### Submit flow
 
-1. Composer fires `onSubmit({ text, model })`.
+1. Composer fires `onSubmit({ text, model, provider })`.
 2. Page (or chat container) appends a `user` message to the conversation immediately. Renders right away — no waiting on the network.
 3. Page appends a placeholder `assistant` message with empty `content` and `status: "streaming"`.
 4. Hook opens the SSE stream. Each `delta` appends to the placeholder's `content`. The `done` event flips status to `"complete"`. The `error` event flips status to `"error"` and stores the message.
@@ -133,7 +134,7 @@ Generate `id` client-side (e.g. `crypto.randomUUID()`) — the backend doesn't a
 
 - **Streaming protocol: SSE.** Single one-way text/event-stream with JSON-per-event. Not WebSockets, not chunked plain text.
 - **Stateless backend.** Client sends the full message history every turn.
-- **Server-side provider routing.** Frontend only sends a model id; backend looks up the provider from the catalog.
+- **Client sends `provider` + `model`.** The backend's catalogs are per-provider (separate `OpenAiModelCatalog` / `AnthropicModelCatalog`, no unified index), so carrying the provider lets the controller dispatch directly instead of scanning every catalog per request. The server still validates that `model` belongs to the named `provider`.
 - **Single `/chat` endpoint.** No per-provider routes.
 - **`fetch` for the stream, axios for everything else.** Already documented as the exception in the frontend guidelines.
 - **Client generates message ids.** Server doesn't assign or persist them.
