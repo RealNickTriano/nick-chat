@@ -1,0 +1,159 @@
+[
+  {
+    "id": "m-001",
+    "role": "user",
+    "content": "Hey!",
+    "status": "complete"
+  },
+  {
+    "id": "m-002",
+    "role": "assistant",
+    "content": "Hi there — how can I help you today?",
+    "status": "complete"
+  },
+  {
+    "id": "m-003",
+    "role": "user",
+    "content": "Can you explain what a closure is in JavaScript?",
+    "status": "complete"
+  },
+  {
+    "id": "m-004",
+    "role": "assistant",
+    "content": "A closure is a function that retains access to variables from the scope in which it was defined, even after that outer scope has finished executing.\n\nHere's a small example:\n\n    function makeCounter() {\n      let count = 0;\n      return () => ++count;\n    }\n\n    const next = makeCounter();\n    next(); // 1\n    next(); // 2\n\nThe returned function \"closes over\" the `count` variable, so it stays alive between calls. Closures are the foundation of a lot of patterns in JS: module privacy, partial application, memoization, and event handlers that need to remember state.",
+    "status": "complete"
+  },
+  {
+    "id": "m-005",
+    "role": "user",
+    "content": "Now do the same but in Go.",
+    "status": "complete"
+  },
+  {
+    "id": "m-006",
+    "role": "assistant",
+    "content": "Go supports closures too. A function literal captures variables from the enclosing scope by reference:\n\n    func makeCounter() func() int {\n        count := 0\n        return func() int {\n            count++\n            return count\n        }\n    }\n\n    next := makeCounter()\n    next() // 1\n    next() // 2\n\nThe inner function keeps `count` alive on the heap for as long as the closure is reachable. Same idea as JS — just with explicit types.",
+    "status": "complete"
+  },
+  {
+    "id": "m-007",
+    "role": "user",
+    "content": "What's the difference between `let`, `const`, and `var`? Keep it short.",
+    "status": "complete"
+  },
+  {
+    "id": "m-008",
+    "role": "assistant",
+    "content": "- `var`: function-scoped, hoisted, reassignable. Legacy.\n- `let`: block-scoped, reassignable.\n- `const`: block-scoped, not reassignable (but contents of objects/arrays are still mutable).\n\nRule of thumb: default to `const`, use `let` only when you must reassign, avoid `var`.",
+    "status": "complete"
+  },
+  {
+    "id": "m-009",
+    "role": "user",
+    "content": "Write me a haiku about debugging.",
+    "status": "complete"
+  },
+  {
+    "id": "m-010",
+    "role": "assistant",
+    "content": "Quiet stack traces —\nprintln() lights the forest,\nbug blinks, then is gone.",
+    "status": "complete"
+  },
+  {
+    "id": "m-011",
+    "role": "user",
+    "content": "Give me a really long response to test wrapping. Talk about the history of the internet.",
+    "status": "complete"
+  },
+  {
+    "id": "m-012",
+    "role": "assistant",
+    "content": "Sure — here's a compressed tour.\n\nThe internet's roots go back to the 1960s, when the U.S. Department of Defense funded ARPANET. The goal was modest but radical: let geographically separated computers exchange messages over unreliable links. Researchers like Paul Baran and Donald Davies independently developed packet switching, which chops messages into small chunks that can take different routes and be reassembled at the destination. On October 29, 1969, the first ARPANET message was sent between UCLA and Stanford — the operator typed \"LO\" before the system crashed, which is probably the most on-brand origin story in tech.\n\nThrough the 1970s, protocols evolved. Vint Cerf and Bob Kahn's TCP/IP (finalized as a standard in 1983) gave networks a common language and made it possible to connect heterogeneous systems. Email emerged almost as a side effect. Usenet, FTP, and Gopher followed — each carving out a niche for how people would share information.\n\nThe real inflection point was 1989–1991, when Tim Berners-Lee at CERN proposed and built the World Wide Web: HTTP, HTML, and the first browser. The web layered a navigable document space on top of the internet's plumbing, and suddenly the network was something ordinary people could use. Mosaic (1993) and Netscape (1994) made it visual and mainstream. By the late 1990s, the dot-com boom was in full swing.\n\nThe 2000s brought broadband, mobile, and the social web: Wikipedia, Facebook, YouTube, Twitter. The 2010s were defined by the smartphone and cloud computing — AWS normalized the idea that infrastructure is rented, not owned. The 2020s have been dominated by AI and a re-centralization debate: who controls the protocols, the data, the models?\n\nThe throughline is that every layer was built on the assumption that the layer below it would keep working. That's both the internet's greatest strength and its most interesting fragility.",
+    "status": "complete"
+  },
+  {
+    "id": "m-013",
+    "role": "user",
+    "content": "Show me a bulleted list with some code inline like `const x = 1` mixed in.",
+    "status": "complete"
+  },
+  {
+    "id": "m-014",
+    "role": "assistant",
+    "content": "Sure:\n\n- Declare a constant with `const x = 1`.\n- Use template literals: `` `hello ${name}` ``.\n- Destructure: `const { a, b } = obj`.\n- Spread: `const copy = [...arr]`.\n- Optional chaining: `user?.profile?.name`.\n- Nullish coalescing: `value ?? \"default\"`.",
+    "status": "complete"
+  },
+  {
+    "id": "m-015",
+    "role": "user",
+    "content": "What's 2 + 2?",
+    "status": "complete"
+  },
+  {
+    "id": "m-016",
+    "role": "assistant",
+    "content": "4.",
+    "status": "complete"
+  },
+  {
+    "id": "m-017",
+    "role": "user",
+    "content": "Can you keep going on that — tell me why.",
+    "status": "complete"
+  },
+  {
+    "id": "m-018",
+    "role": "assistant",
+    "content": "Because addition on the natural numbers is defined as repeated application of the successor function, and the successor of the successor of 2 is 4. Peano would be proud.",
+    "status": "complete"
+  },
+  {
+    "id": "m-019",
+    "role": "user",
+    "content": "Now stream something slowly so I can see the cursor.",
+    "status": "complete"
+  },
+  {
+    "id": "m-020",
+    "role": "assistant",
+    "content": "Sure, here comes a partial response that is still bei",
+    "status": "streaming"
+  },
+  {
+    "id": "m-021",
+    "role": "user",
+    "content": "And this one should fail.",
+    "status": "complete"
+  },
+  {
+    "id": "m-022",
+    "role": "assistant",
+    "content": "I started answering but then",
+    "status": "error",
+    "error": "Upstream provider returned 503 Service Unavailable"
+  },
+  {
+    "id": "m-023",
+    "role": "user",
+    "content": "Supercalifragilisticexpialidocioussupercalifragilisticexpialidocioussupercalifragilisticexpialidocious — make sure long unbroken words don't blow out the bubble.",
+    "status": "complete"
+  },
+  {
+    "id": "m-024",
+    "role": "assistant",
+    "content": "Pneumonoultramicroscopicsilicovolcanoconiosispneumonoultramicroscopicsilicovolcanoconiosis — noted. Word-break should handle this.",
+    "status": "complete"
+  },
+  {
+    "id": "m-025",
+    "role": "user",
+    "content": "Last one — make it a short thanks.",
+    "status": "complete"
+  },
+  {
+    "id": "m-026",
+    "role": "assistant",
+    "content": "Anytime.",
+    "status": "complete"
+  }
+]

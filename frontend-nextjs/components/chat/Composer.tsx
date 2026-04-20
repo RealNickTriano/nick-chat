@@ -5,6 +5,7 @@ import type { ChangeEvent, KeyboardEvent } from "react";
 import type { Model, ProviderId } from "@/types/model";
 import { ModelSelector } from "./ModelSelector";
 import { SendButton } from "./SendButton";
+import { ProviderLogo } from "./ProviderLogo";
 
 interface ComposerProps {
   onSubmit: (payload: { text: string; model: string; provider: ProviderId }) => void;
@@ -65,6 +66,7 @@ export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
       />
       <div className="flex items-center justify-between border-t border-neutral-200 px-2 py-2 dark:border-neutral-800">
         <ModelSelector value={model?.id ?? null} onChange={setModel} />
+        {model?.provider && <ProviderLogo provider={model?.provider} />}
         <SendButton onClick={submit} disabled={!canSubmit} />
       </div>
     </div>
