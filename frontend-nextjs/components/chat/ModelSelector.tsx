@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useModelCatalog } from "@/lib/catalog";
+import type { Model } from "@/types/model";
 import { ModelSelectorButton } from "./ModelSelectorButton";
 import { ModelSelectionModal } from "./ModelSelectionModal";
 
@@ -9,7 +10,7 @@ const STORAGE_KEY = "nick-chat:selected-model";
 
 interface ModelSelectorProps {
   value: string | null;
-  onChange: (next: string) => void;
+  onChange: (next: Model) => void;
 }
 
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
@@ -21,8 +22,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   useEffect(() => {
     if (value !== null || status !== "ready" || models.length === 0) return;
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    const initial = stored && models.some((m) => m.id === stored) ? stored : models[0].id;
-    onChange(initial);
+    const fromStorage = stored ? models.find((m) => m.id === stored) : undefined;
+    onChange(fromStorage ?? models[0]);
   }, [value, status, models, onChange]);
 
   const selected = value ? models.find((m) => m.id === value) : null;
@@ -34,7 +35,9 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   };
 
   const pick = (id: string) => {
-    onChange(id);
+    const next = models.find((m) => m.id === id);
+    if (!next) return;
+    onChange(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, id);
     }

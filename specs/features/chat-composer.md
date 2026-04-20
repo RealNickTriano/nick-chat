@@ -34,7 +34,7 @@ All three are client components (`"use client"`).
 
 **Props**
 
-- `onSubmit(payload: { text: string; model: ModelId }): void` — called when the user submits a non-empty message. Parent decides what to do with it (append to chat, send over network, etc.).
+- `onSubmit(payload: { text: string; model: ModelId; provider: ProviderId }): void` — called when the user submits a non-empty message. Parent decides what to do with it (append to chat, send over network, etc.). The composer emits `provider` alongside `model` so the parent can forward both to the backend without re-looking up the catalog (see `send-message.md`).
 - `disabled?: boolean` — when true, typing is allowed but submit is blocked. Used by the parent while a response is streaming.
 - `initialModel?: ModelId` — the model selected on first render. Defaults to the app-level default.
 - `placeholder?: string` — textarea placeholder. Has a sensible default.

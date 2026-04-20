@@ -39,7 +39,7 @@ export function ModelSelectionModal({ open, onClose, value, onPick }: ModelSelec
       onClose={onClose}
       onClick={handleBackdropClick}
       aria-label="Select a model"
-      className="m-auto w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl backdrop:bg-black/10 md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
+      className="m-auto w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl backdrop:bg-black/70 md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
     >
       <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
         <h2 className="text-sm font-medium">Select a model</h2>

@@ -2,11 +2,13 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
+import type { Model, ProviderId } from "@/types/model";
 import { ModelSelector } from "./ModelSelector";
 import { SendButton } from "./SendButton";
+import { ProviderLogo } from "./ProviderLogo";
 
 interface ComposerProps {
-  onSubmit: (payload: { text: string; model: string }) => void;
+  onSubmit: (payload: { text: string; model: string; provider: ProviderId }) => void;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -15,7 +17,7 @@ const MAX_ROWS = 10;
 
 export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
   const [text, setText] = useState("");
-  const [model, setModel] = useState<string | null>(null);
+  const [model, setModel] = useState<Model | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize: reset to auto, then clamp to MAX_ROWS worth of line-height.
@@ -33,8 +35,8 @@ export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
   const canSubmit = text.trim().length > 0 && !disabled && model !== null;
 
   const submit = () => {
-    if (!canSubmit || model === null) return;
-    onSubmit({ text: text.trim(), model });
+    if (!canSubmit || !model) return;
+    onSubmit({ text: text.trim(), model: model.id, provider: model.provider });
     setText("");
     textareaRef.current?.focus();
   };
@@ -60,10 +62,11 @@ export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
         placeholder={placeholder ?? "Ask anything..."}
         rows={1}
         aria-label="Message"
-        className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-base leading-6 text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+        className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-base leading-6 chat-scroll text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
       />
       <div className="flex items-center justify-between border-t border-neutral-200 px-2 py-2 dark:border-neutral-800">
-        <ModelSelector value={model} onChange={setModel} />
+        <ModelSelector value={model?.id ?? null} onChange={setModel} />
+        {model?.provider && <ProviderLogo provider={model?.provider} />}
         <SendButton onClick={submit} disabled={!canSubmit} />
       </div>
     </div>
