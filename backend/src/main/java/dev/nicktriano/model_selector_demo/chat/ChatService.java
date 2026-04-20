@@ -22,6 +22,8 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
+import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
+import dev.nicktriano.model_selector_demo.model.StreamingModel;
 import dev.nicktriano.model_selector_demo.model_selector.ModelSelectorService;
 
 @Service
@@ -52,7 +54,6 @@ public class ChatService {
 
   public void stream(ResolvedRequest resolved, SseEmitter emitter) {
     StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model());
-
     ChatRequest lcRequest = ChatRequest.builder().messages(resolved.messages()).build();
 
     model.chat(lcRequest, new StreamingChatResponseHandler() {
@@ -108,17 +109,17 @@ public class ChatService {
   }
 
   private StreamingChatModel buildStreamingModel(ModelProvider provider, String model) {
-    return switch (provider) {
-      case OPEN_AI -> OpenAiStreamingChatModel.builder()
-        .apiKey(openAiApiKey)
-        .modelName(model)
-        .build();
-      case ANTHROPIC -> AnthropicStreamingChatModel.builder()
-        .apiKey(anthropicApiKey)
-        .modelName(model)
-        .build();
+    String key = switch (provider) {
+      case OPEN_AI -> openAiApiKey;
+      case ANTHROPIC -> anthropicApiKey;
       default -> throw new ChatValidationException("Unsupported provider: " + provider);
     };
+
+    return StreamingChatModelBuilder.builder()
+      .apiKey(key)
+      .provider(provider)
+      .modelName(model)
+      .build();
   }
 
   private List<ChatMessage> toLangchainMessages(List<ChatStreamRequest.Message> messages) {
