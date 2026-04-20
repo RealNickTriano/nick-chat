@@ -61,7 +61,7 @@ export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
         placeholder={placeholder ?? "Ask anything..."}
         rows={1}
         aria-label="Message"
-        className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-base leading-6 text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+        className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-base leading-6 chat-scroll text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
       />
       <div className="flex items-center justify-between border-t border-neutral-200 px-2 py-2 dark:border-neutral-800">
         <ModelSelector value={model?.id ?? null} onChange={setModel} />

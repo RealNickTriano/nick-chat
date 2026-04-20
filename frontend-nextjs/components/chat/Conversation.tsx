@@ -22,7 +22,7 @@ export function Conversation({ messages }: ConversationProps) {
       ref={listRef}
       aria-live="polite"
       aria-atomic="false"
-      className="chat-scroll flex max-h-full min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
+      className="chat-scroll flex max-h-full min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4"
     >
       {messages.map((m) => (
         <li key={m.id}>
