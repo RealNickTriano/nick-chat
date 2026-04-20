@@ -2,6 +2,8 @@ package dev.nicktriano.model_selector_demo.chat;
 
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,6 +34,8 @@ public class ChatController {
 
   @ExceptionHandler(ChatValidationException.class)
   public ResponseEntity<Map<String, String>> handleValidation(ChatValidationException ex) {
-    return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Map.of("error", ex.getMessage()));
   }
 }

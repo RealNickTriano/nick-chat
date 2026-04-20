@@ -13,14 +13,19 @@ export function ChatError({ message }: ChatErrorProps) {
   try {
     if (prevMessage != message && message) {
       setPrevMessage(message);
-      const json = JSON.parse(message);
-      if (json.error.message) {
-        setFormattedMessage(json.error.message);
+      if (typeof message === "string") {
+        setFormattedMessage(message);
       } else {
-        setFormattedMessage(DEFAULT_MESSAGE);
+        const json = JSON.parse(message);
+        if (json.error.message) {
+          setFormattedMessage(json.error.message);
+        } else {
+          setFormattedMessage(DEFAULT_MESSAGE);
+        }
       }
     }
   } catch {
+    console.warn("Could not parse error... Setting default message");
     setFormattedMessage(DEFAULT_MESSAGE);
   }
 
