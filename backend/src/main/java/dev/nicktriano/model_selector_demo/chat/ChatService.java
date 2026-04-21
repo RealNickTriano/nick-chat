@@ -23,7 +23,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
-import dev.nicktriano.model_selector_demo.model.StreamingModel;
 import dev.nicktriano.model_selector_demo.model_selector.ModelSelectorService;
 
 @Service
