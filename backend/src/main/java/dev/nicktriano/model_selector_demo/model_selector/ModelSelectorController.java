@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,7 +12,6 @@ import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.catalog.ModelType;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
 public class ModelSelectorController {
   
   private final ModelSelectorService modelSelectorService;
