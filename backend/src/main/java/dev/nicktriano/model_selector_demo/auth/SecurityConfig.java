@@ -39,11 +39,11 @@ public class SecurityConfig {
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
             .csrfTokenRequestHandler(csrfHandler)
-            .ignoringRequestMatchers("/chat/**")
+            .ignoringRequestMatchers("/chat/**", "/chats/**")
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/auth/**", "/catalog/**", "/error").permitAll()
-            .requestMatchers("/chat/**").authenticated()
+            .requestMatchers("/chat/**", "/chats/**").authenticated()
             .anyRequest().permitAll()
         )
         .oauth2Login(oauth -> oauth
