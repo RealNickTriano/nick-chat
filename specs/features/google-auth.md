@@ -109,50 +109,87 @@ Go with **(1)** — it's what Spring Security does out of the box, and it genera
 
 ## Frontend behavior
 
-### Sign-in surface
+### Auth model: one context, one source of truth
 
-- A "Sign in with Google" button rendered in the app header when `/auth/me` returns `401`.
-- On click, navigate the browser (full document navigation, not `fetch`) to `${NEXT_PUBLIC_API_BASE_URL}/auth/login/google`. Full navigation is required — the flow ends in Google redirecting back to the backend callback, which then redirects to the frontend origin.
-- No loading spinner needed — the click is instantly a navigation.
+All auth state lives in a single `AuthContext` mounted at the root layout. No module-scope caches, no duplicate `/auth/me` calls, no per-component fetches.
 
-### Signed-in surface
+- `components/auth/AuthProvider.tsx` — client component. On mount, calls `GET /auth/me`. Exposes:
+  ```ts
+  type AuthStatus = "loading" | "authed" | "anon";
 
-- The header shows an avatar (from `pictureUrl`) + display name. Clicking opens a small menu with a single "Sign out" action.
-- Sign out calls `POST /auth/logout` with credentials included and the CSRF header, then triggers a re-fetch of `/auth/me` (which will now 401) so the UI flips back to the signed-out state without a full reload.
-
-### `useAuth` hook
-
-- `hooks/use-auth.ts` — owns the auth state: `{ status: "loading" | "authed" | "anon", user: User | null, signOut(): Promise<void>, refresh(): Promise<void> }`.
-- On mount, calls `GET /auth/me` through the shared axios client with `withCredentials: true`.
-- Caches the result at module scope so multiple consumers share one request (same pattern as `lib/catalog.ts`).
-
-### Axios configuration
-
-- Set `withCredentials: true` on the shared instance so the session cookie is sent on every call, including `/chat`.
-- Add a response interceptor: on `401` from any call, flip the cached auth state to `anon`. Don't auto-redirect — the page re-renders the signed-out UI and the user decides what to do.
+  interface AuthContextValue {
+    status: AuthStatus;
+    user: User | null;
+    signOut(): Promise<void>;
+    refresh(): Promise<void>;  // re-fetches /auth/me
+  }
+  ```
+- `hooks/use-auth.ts` — returns `useContext(AuthContext)`. Throws if used outside `<AuthProvider>` so misuse is loud.
+- Mounted once in `app/layout.tsx` so every route — including `/login` — has access.
 
 ### Routing / gating
 
-- The chat surface (the main `app/page.tsx`) is gated: when `status === "anon"`, render a centered `<SignedOutPlaceholder />` with the sign-in button and a short pitch. Do **not** render the composer or the conversation.
-- `status === "loading"` renders a lightweight skeleton so unauth'd users don't briefly see the composer.
-- No middleware-based redirects in v1 — all gating is rendered, since there's only one route.
+**Every route is gated except `/login`.** An unauthenticated user who lands anywhere else is redirected to `/login`. A 401 on any backend call has the same effect.
+
+- `app/login/page.tsx` — the only public route. Mostly blank: centered `<SignInButton />`, optional `auth_error` banner above it, nothing else (no header, no chrome). Rendered via a dedicated `app/login/layout.tsx` that does **not** wrap in the gate.
+- `components/auth/AuthGate.tsx` — client component mounted inside `app/layout.tsx` (or a route group layout that covers every non-login route). Behavior:
+  - `status === "loading"` → render a thin skeleton (no composer, no header content). Never render protected children while loading.
+  - `status === "anon"` → `router.replace("/login")` in an effect, render nothing in the meantime.
+  - `status === "authed"` → render `children`.
+- `/login` when already authenticated → effect in the login page redirects to `/`. Prevents a signed-in user from seeing the login screen by accident.
+
+### 401 handling
+
+The axios instance has a single response interceptor that treats any `401` as "your session is gone" and redirects the browser to `/login`:
+
+```ts
+if (error?.response?.status === 401 && window.location.pathname !== "/login") {
+  window.location.replace("/login");
+}
+return Promise.reject(error);
+```
+
+Notes:
+
+- It's a full document navigation, not a client-side `router.replace`. Simpler — `useRouter()` isn't available outside React components. The trade-off is a hard reload on session expiry, which is acceptable because everything gets re-fetched on the login page anyway.
+- Guarded against redirect loops on `/login` itself (the `AuthProvider` calls `/auth/me` on mount, which 401s for anonymous users — that call must not bounce back to `/login` when already there).
+- The promise still rejects so callers' `.catch` fires and can surface "session expired" UI if desired.
+- The interceptor is installed once at module import time and fires regardless of which feature made the call.
+
+### Sign-in
+
+- `/login` renders a `<SignInButton />` in the middle of the viewport. Clicking it does a **full document navigation** to `${NEXT_PUBLIC_API_BASE_URL}/auth/login/google` (the OAuth dance ends in a redirect from the backend, so a client-side `router.push` would be wrong).
+- No loading spinner — the click is instantly a navigation.
+
+### Signed-in surface
+
+- The app header (inside the gated tree) shows an avatar (from `pictureUrl`) + display name. Clicking opens a small menu with a single "Sign out" action.
+- Sign out calls `POST /auth/logout` with credentials and the CSRF header via `useAuth().signOut()`. On success, the provider flips state to `anon`, which the gate picks up and redirects to `/login` — a single code path for "I'm no longer signed in".
+
+### Axios configuration
+
+- `withCredentials: true` on the shared instance so the session cookie is sent on every call, including `/chat`.
+- CSRF token interceptor: read `XSRF-TOKEN` cookie and set `X-XSRF-TOKEN` on mutating requests (`POST`/`PUT`/`DELETE`).
+- 401 interceptor described above.
 
 ### Component breakdown
 
 PascalCase components, SVGs in their own files, one file per icon — per the frontend guidelines and the user's standing preferences.
 
+- `components/auth/AuthProvider.tsx` — the context provider described above. Owns the `/auth/me` fetch.
+- `components/auth/AuthGate.tsx` — the redirect-if-anon wrapper.
 - `components/auth/SignInButton.tsx` — the "Sign in with Google" button. Renders `<GoogleLogo />` + label, fires a full navigation on click.
-- `components/auth/UserMenu.tsx` — avatar + dropdown with "Sign out". Pure controlled; consumes `useAuth`.
-- `components/auth/SignedOutPlaceholder.tsx` — the centered empty state shown when unauthenticated.
+- `components/auth/UserMenu.tsx` — avatar + dropdown with "Sign out". Consumes `useAuth`.
 - `components/auth/Avatar.tsx` — renders `<img>` for `pictureUrl` with a fallback initial when the URL is missing/broken.
 - `components/svg/GoogleLogo.tsx` — Google's `G` mark, in its own file. Sets its own default className inside the component (per the per-logo-classNames rule); consumers can still override.
-- `hooks/use-auth.ts` — the auth hook described above.
+- `hooks/use-auth.ts` — `useContext(AuthContext)` wrapper with the dev-time guard.
 - `lib/auth.ts` — thin wrapper around the axios client: `fetchMe()`, `logout()`, `loginUrl()`. Runtime helpers only; no types.
 - `types/user.ts` — the `User` type as returned by `/auth/me`.
+- `app/login/page.tsx`, `app/login/layout.tsx` — the login route (public; not wrapped by `AuthGate`).
 
 ### Header placement
 
-The existing layout doesn't have a persistent header component yet. This spec introduces `components/layout/Header.tsx` mounted in `app/layout.tsx`, rendering the app title on the left and either `<SignInButton />` or `<UserMenu />` on the right depending on auth status. That's the only layout change — the chat surface below is untouched structurally.
+The existing layout doesn't have a persistent header component yet. This spec introduces `components/layout/Header.tsx` mounted **inside** the gated tree (so `/login` has no header). It renders the app title on the left and `<UserMenu />` on the right. By the time the header renders, `status === "authed"` is guaranteed by the gate.
 
 ## Security
 
@@ -166,7 +203,7 @@ The existing layout doesn't have a persistent header component yet. This spec in
 
 ## Errors
 
-Auth failures surface on the frontend via the `auth_error` query parameter on the post-login redirect. The frontend reads it on mount, shows an inline error on the signed-out placeholder, and clears it from the URL via `history.replaceState`.
+Auth failures surface on the frontend via the `auth_error` query parameter. On a failed sign-in, the backend redirects to the frontend origin with `?auth_error=<code>`; the root route inherits the gate and immediately bounces the (still-anonymous) user to `/login`, forwarding the query param. The `/login` page reads it on mount, shows an inline banner above the sign-in button, and clears it from the URL via `history.replaceState`.
 
 Error codes:
 
@@ -183,7 +220,8 @@ The `/auth/me` endpoint never leaks detail — it's just `200` with the user or 
 - Google logo SVG is decorative (`aria-hidden="true"`). The accessible name comes from the button text.
 - User menu is keyboard-navigable (arrow keys within the menu, Escape closes, focus returns to the trigger).
 - Avatar image has `alt=""` when purely decorative next to the display name; otherwise `alt={displayName}`.
-- The signed-out placeholder is announced once via `aria-live="polite"` on the route transition, not per render.
+- The `/login` page announces the auth-error banner (if present) once via `aria-live="polite"`; the banner is not re-announced on every render.
+- The skeleton shown while `status === "loading"` uses `aria-busy="true"` on the gated region so assistive tech knows content is pending, not missing.
 
 ## Environment / setup
 
@@ -208,9 +246,11 @@ Backend:
 
 Frontend:
 
-- Vitest for `use-auth` loading → authed / anon transitions with a mocked axios client.
-- Vitest for `SignedOutPlaceholder` rendering the error banner when `auth_error` is present.
-- Manual: real Google login in dev, verifying the cookie is set, `/auth/me` returns the user, `/chat` streams, `/auth/logout` clears the state.
+- Vitest for `AuthProvider` loading → authed / anon transitions with a mocked axios client.
+- Vitest for `AuthGate` rendering the skeleton while loading, redirecting to `/login` when anon, and rendering children when authed (mocking `useRouter`).
+- Vitest for the axios 401 interceptor calling `window.location.replace("/login")` when the user is not already on `/login`.
+- Vitest for the login page rendering the error banner when `auth_error` is present and clearing it from the URL.
+- Manual: real Google login in dev, verifying the cookie is set, `/auth/me` returns the user, `/chat` streams, `/auth/logout` clears the state and bounces to `/login`.
 
 ## Out of scope (for this spec)
 
@@ -229,7 +269,9 @@ Frontend:
 - **Session cookies, not JWTs.** `HttpOnly` session cookie with server-side state is simpler, revocable, and avoids the token-refresh dance. If we ever need stateless auth (e.g. for a non-browser client), revisit.
 - **Google `sub` is the identity key.** `email` is not stable enough (Google users can change the primary email on their account).
 - **One Google account → one user record.** No account linking in v1.
-- **Gated at render time, not middleware.** Only one authenticated route today. Middleware-based redirects can come back when there's a second route that needs them.
+- **Global gate via `AuthContext` + client-side redirect.** Every route except `/login` is wrapped by `<AuthGate>`; unauth'd users (and any 401 mid-session) are sent to `/login` via `router.replace`. No Next.js middleware: the backend is the session authority, and middleware can't cheaply verify `/auth/me` per request. Revisit if we need SSR auth-aware rendering.
+- **Single `AuthContext`, no module-scope auth cache.** `AuthProvider` owns the one `/auth/me` call; `useAuth()` reads context. Avoids the divergence risk of a second source of truth in `lib/*`.
+- **401 redirect via `window.location.replace`, not a client-side router.** `useRouter()` isn't callable from a plain module, so the axios interceptor does a hard navigation to `/login`. One branch, one line, no pub-sub. Cost is a full reload on session expiry — fine, because the destination needs a fresh auth probe anyway.
 - **Scopes minimized to `openid email profile`.** Any additional scope is a deliberate, spec-worthy addition.
 - **Logout is POST with CSRF.** GET logout is footgun-prone (link prefetching, image tags).
 - **Upsert on every login.** Keeps `displayName` and `pictureUrl` in sync with Google without an explicit "sync profile" button.
