@@ -54,7 +54,7 @@ public class AuthController {
     SecurityContextHolder.clearContext();
     context.setAuthentication(null);
     
-    Cookie cleared = new Cookie("SESSION", "");
+    Cookie cleared = new Cookie("JSESSIONID", "");
     cleared.setPath("/");
     cleared.setHttpOnly(true);
     cleared.setMaxAge(0);

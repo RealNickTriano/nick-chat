@@ -12,6 +12,7 @@ export async function* chatStream(
       method: "POST",
       headers: { "content-type": "application/json", accept: "text/event-stream" },
       body: JSON.stringify(request),
+      credentials: "include",
       signal,
     });
   } catch (err) {
