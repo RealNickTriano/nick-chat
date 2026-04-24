@@ -171,7 +171,7 @@ CREATE TABLE messages (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_id     UUID        NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
     role        VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
-    content     JSONB       NOT NULL,
+    content     TEXT        NOT NULL,
     provider    VARCHAR(50),
     model       VARCHAR(100),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -180,7 +180,7 @@ CREATE TABLE messages (
 CREATE INDEX idx_messages_chat_id_created_at ON messages(chat_id, created_at ASC);
 ```
 
-- `content` is JSONB. Initial shape: `{"message": "hello world"}`. Future shapes can add `attachments`, `images`, etc. without schema changes.
+- `content` is plain text storing the message string.
 - `provider` and `model` are recorded on **both** user and assistant messages. For user messages they record which provider/model the message was sent to; for assistant messages they record which provider/model produced the response. This is intentional.
 - `role` is constrained at the DB level to `'user'` or `'assistant'`.
 
@@ -263,16 +263,14 @@ Creates a new chat and sends the first message. Responds with SSE stream.
 {
   "provider": "anthropic",
   "model": "claude-opus-4-7",
-  "content": {
-    "message": "hello world"
-  }
+  "content": "hello world"
 }
 ```
 
 **Validation:**
 - `provider`: required, must be in known-providers list.
 - `model`: required, must be a valid model id for that provider (§8.3).
-- `content.message`: required, non-blank, max 100,000 chars.
+- `content`: required, non-blank, max 100,000 chars.
 - User must have an `api_keys` row for `provider`; otherwise `400`.
 
 **Behavior:**
@@ -374,7 +372,7 @@ Fetches messages for a chat.
       "role": "user",
       "provider": "anthropic",
       "model": "claude-opus-4-7",
-      "content": { "message": "hello world" },
+      "content": "hello world",
       "createdAt": "2026-04-24T12:00:00Z"
     },
     {
@@ -382,7 +380,7 @@ Fetches messages for a chat.
       "role": "assistant",
       "provider": "anthropic",
       "model": "claude-opus-4-7",
-      "content": { "message": "Hi! How can I help?" },
+      "content": "Hi! How can I help?",
       "createdAt": "2026-04-24T12:00:02Z"
     }
   ],
@@ -573,8 +571,8 @@ For each streaming request:
    Reverse the result before building the memory window to restore chronological order.
 2. Construct a `MessageWindowChatMemory` with `maxMessages = 100` (configurable).
 3. For each DB row, add to memory:
-   - `role = 'user'` → `UserMessage.from(content.message)`
-   - `role = 'assistant'` → `AiMessage.from(content.message)`
+   - `role = 'user'` → `UserMessage.from(content)`
+   - `role = 'assistant'` → `AiMessage.from(content)`
 4. Do **not** add the new user message to memory manually — pass it as the `@UserMessage` argument to `ChatAssistant.chat()`; LangChain4j adds it to memory automatically.
 5. Pass the hydrated `ChatMemory` to `ChatModelFactory.createAssistant()`.
 

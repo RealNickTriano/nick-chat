@@ -3,6 +3,7 @@ package dev.nicktriano.model_selector_demo.auth;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -38,7 +39,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     String googleSub = principal.getAttribute("sub");
     Boolean emailVerified = principal.getAttribute("email_verified");
-    String email = principal.getAttribute("email");
 
     if (googleSub == null || googleSub.isBlank()) {
       redirectWithError(request, response, "server_error");
@@ -49,14 +49,15 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       return;
     }
 
-    User user = userRepository.upsertByGoogleSub(new UserRepository.GoogleProfile(
-        googleSub,
-        email,
-        principal.getAttribute("name"),
-        principal.getAttribute("picture")
-    ));
+    UserEntity user = new UserEntity();
+    user.setDisplayName(principal.getAttribute("name"));
+    user.setPictureUrl(principal.getAttribute("picture"));
+    user.setEmail(principal.getAttribute("email"));
+    user.setGoogleSub(googleSub);
+    user.setLastLoginAt(Instant.now());
+    userRepository.save(user);
 
-    request.getSession(true).setAttribute(SessionUser.ATTRIBUTE, user.id());
+    request.getSession(true).setAttribute(SessionUser.ATTRIBUTE, user.getId());
 
     getRedirectStrategy().sendRedirect(request, response, postLoginRedirect);
   }

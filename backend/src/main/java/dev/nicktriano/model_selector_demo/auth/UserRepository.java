@@ -1,17 +1,29 @@
 package dev.nicktriano.model_selector_demo.auth;
 
 import java.util.Optional;
+import java.util.UUID;
 
-public interface UserRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 
-  Optional<User> findById(String id);
+import jakarta.transaction.Transactional;
 
-  User upsertByGoogleSub(GoogleProfile profile);
+interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
-  record GoogleProfile(
-      String googleSub,
-      String email,
-      String displayName,
-      String pictureUrl
-  ) {}
+  Optional<UserEntity> findByGoogleSub(String googleSub);
+
+  @Modifying
+  @Transactional
+  @Query(value = "INSERT INTO users (id, name, email) " +
+                   "VALUES (:id, :name, :email) " +
+                   "ON CONFLICT (id) " +
+                   "DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email", 
+           nativeQuery = true)
+  Optional<UserEntity> upsertUser(
+    String googleSub,
+    String email,
+    String displayName,
+    String pictureUrl
+  );
 }

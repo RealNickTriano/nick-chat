@@ -1,6 +1,7 @@
 package dev.nicktriano.model_selector_demo.auth;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,21 +28,21 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  public ResponseEntity<AuthUserResponse> me(HttpServletRequest request) {
+  public ResponseEntity<UserEntity> me(HttpServletRequest request) {
     HttpSession session = request.getSession(false);
     if (session == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     Object userId = session.getAttribute(SessionUser.ATTRIBUTE);
-    if (!(userId instanceof String uid)) {
+    if (!(userId instanceof UUID uid)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
-    Optional<User> user = userRepository.findById(uid);
+    Optional<UserEntity> user = userRepository.findById(uid);
     if (user.isEmpty()) {
       session.invalidate();
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
-    return ResponseEntity.ok(AuthUserResponse.from(user.get()));
+    return ResponseEntity.ok(user.get());
   }
 
   @PostMapping("/logout")
@@ -62,23 +63,5 @@ public class AuthController {
     response.addCookie(cleared);
 
     return ResponseEntity.noContent().build();
-  }
-
-  public record AuthUserResponse(
-      String id,
-      String googleSub,
-      String email,
-      String displayName,
-      String pictureUrl
-  ) {
-    static AuthUserResponse from(User user) {
-      return new AuthUserResponse(
-          user.id(),
-          user.googleSub(),
-          user.email(),
-          user.displayName(),
-          user.pictureUrl()
-      );
-    }
   }
 }
