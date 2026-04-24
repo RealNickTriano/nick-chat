@@ -107,6 +107,8 @@ A health check endpoint (`GET /health`) returns `200 OK` with `{"status":"ok"}` 
 
 All migrations live in `src/main/resources/db/migration/` and are managed by Flyway.
 
+`created_at` and `updated_at` columns are managed by **Spring Data JPA auditing**. Annotate the main application class with `@EnableJpaAuditing` and each entity with `@EntityListeners(AuditingEntityListener.class)`. Use `@CreatedDate` for `created_at` and `@LastModifiedDate` for `updated_at`. The migration DDL sets `DEFAULT NOW()` as a safe fallback, but writes always go through JPA.
+
 ### 4.1 `users`
 
 ```sql
@@ -131,30 +133,19 @@ CREATE TABLE api_keys (
     user_id        UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider       VARCHAR(50) NOT NULL,
     encrypted_key  TEXT        NOT NULL,
-    key_iv         TEXT        NOT NULL,  -- base64-encoded AES-GCM IV
+    key_iv         TEXT        NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_api_keys_user_provider UNIQUE (user_id, provider)
 );
 
 CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
-
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_api_keys_updated_at
-    BEFORE UPDATE ON api_keys
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
 - `encrypted_key` holds AES-GCM ciphertext (base64). See §7.
 - `provider` values are validated against the known-provider enum (§6.1).
 - **The plaintext key is never returned from any endpoint after creation.**
+- `updated_at` is managed by Spring Data JPA auditing (`@LastModifiedDate`). No DB trigger needed.
 
 ### 4.3 `chats`
 
@@ -168,16 +159,10 @@ CREATE TABLE chats (
 );
 
 CREATE INDEX idx_chats_user_id_updated_at ON chats(user_id, updated_at DESC);
-
-CREATE TRIGGER trg_chats_updated_at
-    BEFORE UPDATE ON chats
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
-`set_updated_at()` is defined once in the `api_keys` migration and reused here. Ensure the function migration runs before the trigger migrations.
-
 - `title` is nullable; generated from the first user message (§8.2).
-- `updated_at` is bumped whenever a new message is added to the chat — used for sidebar ordering.
+- `updated_at` is managed by Spring Data JPA auditing (`@LastModifiedDate`). No DB trigger needed.
 
 ### 4.4 `messages`
 
