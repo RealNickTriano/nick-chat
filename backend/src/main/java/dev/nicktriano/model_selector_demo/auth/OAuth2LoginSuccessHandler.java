@@ -18,15 +18,14 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-  private final UserRepository userRepository;
+  private final UserService userService;
   private final String postLoginRedirect;
 
   public OAuth2LoginSuccessHandler(
-      UserRepository userRepository,
-      @Value("${app.auth.post-login-redirect}") String postLoginRedirect
+      @Value("${app.auth.post-login-redirect}") String postLoginRedirect, UserService userService
   ) {
-    this.userRepository = userRepository;
     this.postLoginRedirect = postLoginRedirect;
+    this.userService = userService;
   }
 
   @Override
@@ -49,13 +48,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       return;
     }
 
-    UserEntity user = new UserEntity();
-    user.setDisplayName(principal.getAttribute("name"));
-    user.setPictureUrl(principal.getAttribute("picture"));
-    user.setEmail(principal.getAttribute("email"));
-    user.setGoogleSub(googleSub);
-    user.setLastLoginAt(Instant.now());
-    userRepository.save(user);
+    UserEntity user = userService.saveUserOnLogin(
+      googleSub,
+      principal.getAttribute("email"),
+      principal.getAttribute("name"),
+      principal.getAttribute("picture")
+    );
 
     request.getSession(true).setAttribute(SessionUser.ATTRIBUTE, user.getId());
 

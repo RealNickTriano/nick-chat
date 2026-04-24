@@ -13,17 +13,4 @@ interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
   Optional<UserEntity> findByGoogleSub(String googleSub);
 
-  @Modifying
-  @Transactional
-  @Query(value = "INSERT INTO users (id, name, email) " +
-                   "VALUES (:id, :name, :email) " +
-                   "ON CONFLICT (id) " +
-                   "DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email", 
-           nativeQuery = true)
-  Optional<UserEntity> upsertUser(
-    String googleSub,
-    String email,
-    String displayName,
-    String pictureUrl
-  );
 }
