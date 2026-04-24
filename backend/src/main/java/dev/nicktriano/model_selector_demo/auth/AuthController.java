@@ -1,10 +1,10 @@
 package dev.nicktriano.model_selector_demo.auth;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/auth")
@@ -27,34 +26,23 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  public ResponseEntity<AuthUserResponse> me(HttpServletRequest request) {
-    HttpSession session = request.getSession(false);
-    if (session == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-    Object userId = session.getAttribute(SessionUser.ATTRIBUTE);
-    if (!(userId instanceof String uid)) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-    Optional<User> user = userRepository.findById(uid);
+  public ResponseEntity<UserEntity> me(@CurrentUserId UUID userId) {
+    Optional<UserEntity> user = userRepository.findById(userId);
     if (user.isEmpty()) {
-      session.invalidate();
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
-    return ResponseEntity.ok(AuthUserResponse.from(user.get()));
+    return ResponseEntity.ok(user.get());
   }
 
   @PostMapping("/logout")
   public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-    HttpSession session = request.getSession(false);
+    var session = request.getSession(false);
     if (session != null) {
       session.invalidate();
     }
 
-    SecurityContext context = SecurityContextHolder.getContext();
     SecurityContextHolder.clearContext();
-    context.setAuthentication(null);
-    
+
     Cookie cleared = new Cookie("JSESSIONID", "");
     cleared.setPath("/");
     cleared.setHttpOnly(true);
@@ -62,23 +50,5 @@ public class AuthController {
     response.addCookie(cleared);
 
     return ResponseEntity.noContent().build();
-  }
-
-  public record AuthUserResponse(
-      String id,
-      String googleSub,
-      String email,
-      String displayName,
-      String pictureUrl
-  ) {
-    static AuthUserResponse from(User user) {
-      return new AuthUserResponse(
-          user.id(),
-          user.googleSub(),
-          user.email(),
-          user.displayName(),
-          user.pictureUrl()
-      );
-    }
   }
 }

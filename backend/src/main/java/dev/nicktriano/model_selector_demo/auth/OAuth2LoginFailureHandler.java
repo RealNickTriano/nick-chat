@@ -30,6 +30,7 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
       HttpServletResponse response,
       AuthenticationException exception
   ) throws IOException, ServletException {
+    System.err.println("Auth failure");
     String code = classify(exception);
     String target = postLoginRedirect + "/?auth_error=" + URLEncoder.encode(code, StandardCharsets.UTF_8);
     getRedirectStrategy().sendRedirect(request, response, target);

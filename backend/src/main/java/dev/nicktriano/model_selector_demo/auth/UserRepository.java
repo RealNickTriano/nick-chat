@@ -1,17 +1,12 @@
 package dev.nicktriano.model_selector_demo.auth;
 
 import java.util.Optional;
+import java.util.UUID;
 
-public interface UserRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
 
-  Optional<User> findById(String id);
+interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
-  User upsertByGoogleSub(GoogleProfile profile);
+  Optional<UserEntity> findByGoogleSub(String googleSub);
 
-  record GoogleProfile(
-      String googleSub,
-      String email,
-      String displayName,
-      String pictureUrl
-  ) {}
 }
