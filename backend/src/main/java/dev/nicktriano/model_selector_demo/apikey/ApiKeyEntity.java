@@ -45,6 +45,9 @@ public class ApiKeyEntity {
   @Column(nullable = false)
   private String keyIv;
 
+  @Column(nullable = false, length = 50)
+  private String keyMask;
+
   @CreatedDate
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
