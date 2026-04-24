@@ -1,14 +1,8 @@
 package dev.nicktriano.model_selector_demo.auth;
 
 import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
-
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.persistence.Column;
 
 @Service
 @Transactional

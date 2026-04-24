@@ -3,7 +3,6 @@ package dev.nicktriano.model_selector_demo.auth;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
