@@ -4,6 +4,7 @@ CREATE TABLE api_keys (
     provider       VARCHAR(50)  NOT NULL,
     encrypted_key  TEXT         NOT NULL,
     key_iv         TEXT         NOT NULL,
+    key_mask       VARCHAR(50)  NOT NULL,
     created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_api_keys_user_provider UNIQUE (user_id, provider)
