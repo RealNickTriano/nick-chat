@@ -2,6 +2,7 @@ package dev.nicktriano.model_selector_demo.auth;
 
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,16 +30,16 @@ public class AuthController {
   public ResponseEntity<AuthUserResponse> me(HttpServletRequest request) {
     HttpSession session = request.getSession(false);
     if (session == null) {
-      return ResponseEntity.status(401).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     Object userId = session.getAttribute(SessionUser.ATTRIBUTE);
     if (!(userId instanceof String uid)) {
-      return ResponseEntity.status(401).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     Optional<User> user = userRepository.findById(uid);
     if (user.isEmpty()) {
       session.invalidate();
-      return ResponseEntity.status(401).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     return ResponseEntity.ok(AuthUserResponse.from(user.get()));
   }
