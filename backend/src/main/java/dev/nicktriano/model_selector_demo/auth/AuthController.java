@@ -1,10 +1,10 @@
 package dev.nicktriano.model_selector_demo.auth;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,18 +28,9 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  public ResponseEntity<UserEntity> me(HttpServletRequest request) {
-    HttpSession session = request.getSession(false);
-    if (session == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-    Object userId = session.getAttribute(SessionUser.ATTRIBUTE);
-    if (!(userId instanceof UUID uid)) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-    Optional<UserEntity> user = userRepository.findById(uid);
+  public ResponseEntity<UserEntity> me(@AuthenticationPrincipal UserPrincipal principal) {
+    Optional<UserEntity> user = userRepository.findById(principal.getUserId());
     if (user.isEmpty()) {
-      session.invalidate();
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     return ResponseEntity.ok(user.get());

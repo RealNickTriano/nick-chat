@@ -16,6 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
+  private final CustomOidcUserService customOidcUserService;
   private final OAuth2LoginSuccessHandler successHandler;
   private final OAuth2LoginFailureHandler failureHandler;
   private final String frontendOrigin;
@@ -23,10 +24,12 @@ public class SecurityConfig {
   public SecurityConfig(
       OAuth2LoginSuccessHandler successHandler,
       OAuth2LoginFailureHandler failureHandler,
+      CustomOidcUserService customOidcUserService,
       @Value("${app.auth.frontend-origin}") String frontendOrigin
   ) {
     this.successHandler = successHandler;
     this.failureHandler = failureHandler;
+    this.customOidcUserService = customOidcUserService;
     this.frontendOrigin = frontendOrigin;
   }
 
@@ -41,10 +44,12 @@ public class SecurityConfig {
             .csrfTokenRequestHandler(csrfHandler)
         )
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/auth/me").authenticated()
             .requestMatchers("/auth/**").permitAll()
             .anyRequest().authenticated()
         )
         .oauth2Login(oauth -> oauth
+            .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserService))
             .authorizationEndpoint(endpoint -> endpoint.baseUri("/auth/login"))
             .redirectionEndpoint(endpoint -> endpoint.baseUri("/auth/callback/*"))
             .successHandler(successHandler)
