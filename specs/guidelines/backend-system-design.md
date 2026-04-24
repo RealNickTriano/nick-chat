@@ -2,81 +2,104 @@
 
 ## 1. Overview
 
-A backend service that lets authenticated users send messages to LLMs from multiple providers (Anthropic, OpenAI, Google, etc.) using their own API keys. Built on **Spring Boot 3.x (Java 21)**, **LangChain4j** for provider abstraction, and **PostgreSQL** for persistence. Streaming responses are delivered via **Server-Sent Events (SSE)**.
+A backend service that lets authenticated users send messages to LLMs from multiple providers (Anthropic, OpenAI, Google, Mistral, etc.) using their own API keys. Built on **Spring Boot 4.x (Java 21)**, **LangChain4j** for provider abstraction, and **PostgreSQL** for persistence. Streaming responses are delivered via **Server-Sent Events (SSE)**. Authentication is handled via **Google OAuth2** with server-side HTTP sessions.
 
 ---
 
 ## 2. Tech Stack & Dependencies
 
 - **Java**: 21 (LTS)
-- **Spring Boot**: 3.3.x or later
+- **Spring Boot**: 4.0.5
 - **PostgreSQL**: 15+
-- **LangChain4j**: latest stable (≥ 0.35)
-- **Build**: Gradle or Maven (engineer's choice; examples below use Gradle)
+- **LangChain4j**: 1.13.0
+- **Build**: Maven
 
 Required Spring Boot starters:
-- `spring-boot-starter-web`
+- `spring-boot-starter-webmvc`
 - `spring-boot-starter-data-jpa`
-- `spring-boot-starter-security`
-- `spring-boot-starter-oauth2-resource-server`
+- `spring-boot-starter-oauth2-client`
 - `spring-boot-starter-validation`
 
 Required LangChain4j modules:
-- `langchain4j-core`
+- `langchain4j` (core)
 - `langchain4j-anthropic`
 - `langchain4j-open-ai`
-- `langchain4j-google-ai-gemini` (or whichever providers are in scope)
-- `langchain4j-spring-boot-starter` (optional convenience)
+- `langchain4j-google-ai-gemini`
+- `langchain4j-mistral-ai`
+- `langchain4j-spring-boot4-starter`
 
 Other:
 - `postgresql` JDBC driver
 - `flyway-core` for migrations
-- `bucket4j-core` for rate limiting
+- `bucket4j-core` for rate limiting *(deferred — see §10)*
 - `lombok` (optional)
 
 ---
 
-## 3. Authentication
+## 3. Authentication ✅ COMPLETED
 
 ### 3.1 Strategy
 
-**Google OAuth2 only**, using Spring Security's OAuth2 Resource Server with Google ID tokens as bearer JWTs.
+**Google OAuth2** using Spring Security's OAuth2 Client with server-side HTTP sessions. The backend handles the full OAuth redirect dance; the frontend never touches tokens directly.
 
 ### 3.2 Flow
 
-1. Client performs Google OAuth on the frontend and obtains a Google ID token (JWT).
-2. Client sends the ID token as `Authorization: Bearer <token>` on every API request.
-3. Backend validates the token against Google's JWKS endpoint (`https://www.googleapis.com/oauth2/v3/certs`) using Spring Security's `JwtDecoder`.
-4. On first successful auth for a new `sub` (Google's stable subject identifier), a row is created in `users` with `google_sub = sub`, `email`, `display_name` (from `name`), `picture_url` (from `picture`).
-5. On every successful auth, `last_login_at` is updated.
-6. The user's internal `users.id` (not `google_sub`) is exposed to controllers via a custom `@AuthenticationPrincipal` resolver or a `CurrentUser` argument resolver.
+1. Frontend redirects the browser to `/auth/login`.
+2. Spring redirects to Google's authorization endpoint.
+3. Google redirects back to `/auth/callback/*`.
+4. `OAuth2LoginSuccessHandler`:
+   - Extracts `sub`, `email_verified`, `email`, `name`, `picture` from the `OAuth2User` principal.
+   - Rejects users where `email_verified != true` (redirects to frontend with `?auth_error=email_unverified`).
+   - Upserts user in `UserRepository` (creates on first login, updates `lastLoginAt` on return visits).
+   - Stores the internal user UUID in the HTTP session: `session.setAttribute("userId", user.id())`.
+   - Redirects browser to `${app.auth.post-login-redirect}`.
+5. All subsequent API requests carry the `JSESSIONID` session cookie. Spring validates the session automatically.
+6. Controllers resolve the current user by reading `session.getAttribute("userId")` and looking up the user via `UserRepository`.
 
-### 3.3 Configuration
+### 3.3 Auth Endpoints
 
-In `application.yml`:
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/auth/login` | Initiates Google OAuth redirect |
+| `GET` | `/auth/callback/*` | OAuth callback (handled by Spring) |
+| `GET` | `/auth/me` | Returns current user info |
+| `POST` | `/auth/logout` | Invalidates session, clears `JSESSIONID` cookie |
 
-```yaml
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://accounts.google.com
-          audiences:
-            - ${GOOGLE_OAUTH_CLIENT_ID}
+**`GET /auth/me` response:**
+```json
+{
+  "id": "<uuid>",
+  "googleSub": "...",
+  "email": "user@example.com",
+  "displayName": "Jane Doe",
+  "pictureUrl": "https://..."
+}
 ```
 
-### 3.4 User Provisioning
+### 3.4 CSRF Protection
 
-Implement a `JwtAuthenticationConverter` or an `OncePerRequestFilter` that runs after JWT validation and:
-- Looks up `users` by `google_sub`.
-- If missing, inserts a new row.
-- If present, updates `last_login_at` (throttled; no need to write on every request — only if `now - last_login_at > 1 hour`).
-- Populates `SecurityContext` with a principal object exposing `userId` (internal UUID) and `email`.
+Enabled via `CookieCsrfTokenRepository.withHttpOnlyFalse()`. The frontend reads the `XSRF-TOKEN` cookie and sends its value as the `X-XSRF-TOKEN` header on all mutating requests (POST, PUT, DELETE).
 
-### 3.5 Protected Routes
+### 3.5 CORS
 
-All routes under `/api/**` require authentication **except** a health check endpoint (`GET /health`) which returns `200 OK` with `{"status":"ok"}`.
+Configured to allow credentials from `${app.auth.frontend-origin}`. Allowed methods: `GET, POST, PUT, DELETE, OPTIONS`.
+
+### 3.6 Configuration
+
+```properties
+app.auth.frontend-origin=${FRONTEND_ORIGIN}
+app.auth.post-login-redirect=${FRONTEND_ORIGIN}
+```
+
+### 3.7 Protected Routes
+
+All routes **except** `/auth/**` require an active session. Unauthenticated requests return `401`.
+
+A health check endpoint (`GET /health`) returns `200 OK` with `{"status":"ok"}` and is also permit-all.
+
+### 3.8 User Provisioning
+
+`UserRepository` is currently backed by `InMemoryUserRepository` (sufficient for development). Will be replaced by a JPA-backed `JpaUserRepository` once the database is wired in. The interface is stable — callers are unaffected by the swap.
 
 ---
 
@@ -115,6 +138,18 @@ CREATE TABLE api_keys (
 );
 
 CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_api_keys_updated_at
+    BEFORE UPDATE ON api_keys
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
 - `encrypted_key` holds AES-GCM ciphertext (base64). See §7.
@@ -133,7 +168,13 @@ CREATE TABLE chats (
 );
 
 CREATE INDEX idx_chats_user_id_updated_at ON chats(user_id, updated_at DESC);
+
+CREATE TRIGGER trg_chats_updated_at
+    BEFORE UPDATE ON chats
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
+
+`set_updated_at()` is defined once in the `api_keys` migration and reused here. Ensure the function migration runs before the trigger migrations.
 
 - `title` is nullable; generated from the first user message (§8.2).
 - `updated_at` is bumped whenever a new message is added to the chat — used for sidebar ordering.
@@ -155,16 +196,16 @@ CREATE INDEX idx_messages_chat_id_created_at ON messages(chat_id, created_at ASC
 ```
 
 - `content` is JSONB. Initial shape: `{"message": "hello world"}`. Future shapes can add `attachments`, `images`, etc. without schema changes.
-- `provider` and `model` are nullable only for safety; in practice every message row will have them populated (user messages record which provider/model they were sent to; assistant messages record which provider/model produced them).
+- `provider` and `model` are recorded on **both** user and assistant messages. For user messages they record which provider/model the message was sent to; for assistant messages they record which provider/model produced the response. This is intentional.
 - `role` is constrained at the DB level to `'user'` or `'assistant'`.
 
 ---
 
 ## 5. API Endpoints
 
-All endpoints are prefixed with `/api`. All return JSON unless otherwise noted. All require a valid Google ID token bearer except `GET /health`.
+All return JSON unless otherwise noted. All require an active session except `GET /health`.
 
-### 5.1 `POST /api/apiKeys`
+### 5.1 `POST /apiKeys`
 
 Saves or updates an API key for a provider.
 
@@ -182,7 +223,7 @@ Saves or updates an API key for a provider.
 
 **Behavior:**
 - Encrypts `key` using AES-GCM (§7).
-- Upserts into `api_keys` keyed by `(user_id, provider)`. If a row exists, replace `encrypted_key`, `key_iv`, and bump `updated_at`.
+- Upserts into `api_keys` keyed by `(user_id, provider)`. The `updated_at` trigger handles the timestamp automatically.
 
 **Response:** `200 OK`
 ```json
@@ -193,13 +234,42 @@ Saves or updates an API key for a provider.
 }
 ```
 
-**The plaintext key is never returned.** There is no `GET` endpoint that returns it.
+**The plaintext key is never returned.**
 
 **Error cases:**
 - `400` — invalid provider or missing fields.
-- `401` — missing/invalid auth.
+- `401` — missing/invalid session.
 
-### 5.2 `POST /api/chats` → SSE
+### 5.2 `GET /apiKeys`
+
+Returns which providers the authenticated user has configured API keys for. Metadata only — no keys.
+
+**Response:** `200 OK`
+```json
+{
+  "apiKeys": [
+    { "provider": "anthropic", "updatedAt": "2026-04-24T12:34:56Z" },
+    { "provider": "openai",    "updatedAt": "2026-04-23T09:00:00Z" }
+  ]
+}
+```
+
+### 5.3 `DELETE /apiKeys/{provider}`
+
+Removes the stored API key for a provider.
+
+**Validation:**
+- `provider`: must be in the known-providers list; otherwise `400`.
+- If no key exists for this user + provider, return `404`.
+
+**Response:** `204 No Content`
+
+**Error cases:**
+- `400` — unknown provider.
+- `401` — missing/invalid session.
+- `404` — no key found for this user + provider.
+
+### 5.4 `POST /chats` → SSE
 
 Creates a new chat and sends the first message. Responds with SSE stream.
 
@@ -231,7 +301,7 @@ Creates a new chat and sends the first message. Responds with SSE stream.
    ```
 5. Decrypt the user's API key for this provider (§7).
 6. Construct LangChain4j `StreamingChatLanguageModel` for the requested provider/model (§8.1).
-7. Construct `MessageWindowChatMemory` hydrated from the messages of this chat (§8.4). For a brand-new chat this will contain just the one user message.
+7. Construct chat memory hydrated from the messages of this chat (§8.4). For a brand-new chat this will contain just the one user message.
 8. Stream assistant tokens; for each token emit:
    ```
    event: token
@@ -250,30 +320,32 @@ Creates a new chat and sends the first message. Responds with SSE stream.
     data: {"title":"<generated title>"}
     ```
 
+> **Client note:** The `title` event is emitted *after* `done`. Clients must keep the stream open until `title` (or `error`) is received — do not close on `done`.
+
 **Error handling during streaming:**
 - If the provider call fails mid-stream, emit:
   ```
   event: error
   data: {"message":"<error description>","code":"PROVIDER_ERROR"}
   ```
-  then close. Persist whatever partial assistant text was accumulated (with a flag is not strictly necessary — it's still a valid message).
+  then close. Persist whatever partial assistant text was accumulated.
 
 **Response content type:** `text/event-stream`
 
-### 5.3 `POST /api/chats/{chatId}/messages` → SSE
+### 5.5 `POST /chats/{chatId}/messages` → SSE
 
 Sends a new message to an existing chat.
 
-**Request body:** Same shape as `POST /api/chats`.
+**Request body:** Same shape as `POST /chats`.
 
 **Validation:**
 - `chatId` must exist and `chats.user_id` must equal the authenticated user. Otherwise `404` (do not leak existence of other users' chats).
-- All body validation same as `POST /api/chats`.
+- All body validation same as `POST /chats`.
 
 **Behavior:**
-Steps 2–11 of `POST /api/chats`, skipping chat creation and title generation. The `chat_created` event is not emitted.
+Steps 2–11 of `POST /chats`, skipping chat creation and title generation. The `chat_created` event is not emitted.
 
-### 5.4 `GET /api/chats`
+### 5.6 `GET /chats`
 
 Lists the authenticated user's chats (for sidebar).
 
@@ -298,7 +370,7 @@ Lists the authenticated user's chats (for sidebar).
 
 Ordered by `updated_at DESC`. `nextCursor` is the `updated_at` of the last returned chat, or `null` if fewer than `limit` rows were returned.
 
-### 5.5 `GET /api/chats/{chatId}/messages`
+### 5.7 `GET /chats/{chatId}/messages`
 
 Fetches messages for a chat.
 
@@ -335,9 +407,9 @@ Fetches messages for a chat.
 
 Ordered by `created_at ASC`.
 
-### 5.6 `GET /api/models`
+### 5.8 `GET /models`
 
-Lists all supported models, grouped by provider.
+Lists available models for each provider by querying LangChain4j's `ModelCatalog` at request time. No local model list is maintained.
 
 **Query params (optional):**
 - `provider`: filter to a single provider.
@@ -349,38 +421,20 @@ Lists all supported models, grouped by provider.
     {
       "provider": "anthropic",
       "models": [
-        { "id": "claude-opus-4-7", "displayName": "Claude Opus 4.7" },
-        { "id": "claude-sonnet-4-6", "displayName": "Claude Sonnet 4.6" }
-      ]
-    },
-    {
-      "provider": "openai",
-      "models": [
-        { "id": "gpt-4o", "displayName": "GPT-4o" }
+        {
+          "id": "claude-opus-4-7",
+          "displayName": "Claude Opus 4.7",
+          "type": "CHAT",
+          "maxInputTokens": 200000,
+          "maxOutputTokens": 32000
+        }
       ]
     }
   ]
 }
 ```
 
-Model lists come from LangChain4j where available, or from a hardcoded `ModelRegistry` for providers that don't expose a list endpoint. See §8.3.
-
-### 5.7 `GET /api/models/{provider}/{modelId}`
-
-Fetches a single model's metadata.
-
-**Response:** `200 OK`
-```json
-{
-  "provider": "anthropic",
-  "id": "claude-opus-4-7",
-  "displayName": "Claude Opus 4.7",
-  "contextWindow": 200000,
-  "supportsStreaming": true
-}
-```
-
-`404` if provider or model is unknown.
+Fields map directly from LangChain4j's `ModelDescription` (`name` → `id`; optional fields omitted when null). Providers that do not expose a `ModelCatalog` are omitted from the response. See §8.3.
 
 ---
 
@@ -393,7 +447,8 @@ Hardcoded enum:
 public enum Provider {
     ANTHROPIC("anthropic"),
     OPENAI("openai"),
-    GOOGLE("google");
+    GOOGLE("google"),
+    MISTRAL("mistral");
     // add more as supported
 }
 ```
@@ -402,7 +457,7 @@ Any request with an unknown `provider` string returns `400` with message `"Unkno
 
 ### 6.2 Model Validation
 
-On every `POST /api/chats` and `POST /api/chats/{chatId}/messages`, verify the requested `model` is in the `ModelRegistry` for the given `provider`. If not, return `400` with message `"Model '<model>' is not available for provider '<provider>'"`.
+Model IDs are not validated locally. The requested `model` string is passed directly to the provider via LangChain4j. An unrecognized model ID will be rejected by the provider and surfaced as a `PROVIDER_ERROR` (502).
 
 ### 6.3 Ownership Checks
 
@@ -446,81 +501,122 @@ Use `javax.crypto.Cipher` with `"AES/GCM/NoPadding"` and a 128-bit auth tag.
 
 ## 8. LangChain4j Integration
 
-### 8.1 Streaming Model Construction
+### 8.1 Model & AiService Construction
 
-For each provider, provide a factory that returns a `StreamingChatLanguageModel` given an API key and model id:
+All provider-specific construction lives in a single `ChatModelFactory` bean. It builds a `StreamingChatModel` and, from that, an `AiService` per request:
 
 ```java
-public interface StreamingModelFactory {
-    Provider provider();
-    StreamingChatLanguageModel create(String apiKey, String modelId);
+@Component
+public class ChatModelFactory {
+
+    public StreamingChatModel createModel(Provider provider, String apiKey, String modelId) {
+        return switch (provider) {
+            case ANTHROPIC -> AnthropicStreamingChatModel.builder().apiKey(apiKey).modelName(modelId).build();
+            case OPENAI    -> OpenAiStreamingChatModel.builder().apiKey(apiKey).modelName(modelId).build();
+            case GOOGLE    -> GoogleAiGeminiStreamingChatModel.builder().apiKey(apiKey).modelName(modelId).build();
+            case MISTRAL   -> MistralAiStreamingChatModel.builder().apiKey(apiKey).modelName(modelId).build();
+        };
+    }
+
+    public ChatAssistant createAssistant(StreamingChatModel model, ChatMemory memory) {
+        return AiServices.builder(ChatAssistant.class)
+                .streamingChatModel(model)
+                .chatMemory(memory)
+                .build();
+    }
+}
+
+interface ChatAssistant {
+    TokenStream chat(@UserMessage String message);
 }
 ```
 
-Implementations:
-- `AnthropicStreamingModelFactory` → `AnthropicStreamingChatModel.builder().apiKey(apiKey).modelName(modelId).build()`
-- `OpenAiStreamingModelFactory` → `OpenAiStreamingChatModel.builder().apiKey(apiKey).modelName(modelId).build()`
-- etc.
-
-A `StreamingModelRouter` bean holds a `Map<Provider, StreamingModelFactory>` and selects the right factory at request time.
+`TokenStream` (LangChain4j's streaming handle) replaces a manual `StreamingResponseHandler`. See §8.5.
 
 ### 8.2 Title Generation
 
-After the first assistant response completes in `POST /api/chats`, send a follow-up non-streaming call to the **same provider and model** the user chose:
+Title generation is handled by a dedicated `TitleGenerationService` that uses a **global application-level API key** (not the user's key) with a low-cost model (`gpt-4o-mini`). This key is configured once via environment variable and is not user-supplied.
 
+After the first assistant response completes in `POST /chats`, `TitleGenerationService` is called asynchronously:
+
+- Provider: OpenAI, Model: `gpt-4o-mini`
 - System prompt: `"Generate a short (max 6 words) title summarizing this conversation. Reply with only the title, no quotes."`
 - User prompt: the first user message's text.
 
-Use a non-streaming `ChatLanguageModel` (not `StreamingChatLanguageModel`) built from the same factory pattern. Persist the result to `chats.title`. If generation fails, leave `title` null — do not block the main flow.
+Use a non-streaming `ChatLanguageModel`. Persist the result to `chats.title`. If generation fails, leave `title` null — do not block the main flow.
 
-### 8.3 Model Registry
+**Configuration:**
+```properties
+app.title-generation.openai-api-key=${TITLE_GENERATION_OPENAI_KEY}
+app.title-generation.model=gpt-4o-mini
+```
 
-A singleton `ModelRegistry` bean:
+### 8.3 Model Discovery
+
+There is no local model registry. Models are discovered at request time using LangChain4j's `ModelCatalog` interface (`dev.langchain4j.model.catalog.ModelCatalog`). `ChatModelFactory` also exposes catalog lookup:
 
 ```java
-public record ModelInfo(String id, String displayName, int contextWindow, boolean supportsStreaming) {}
-
-public interface ModelRegistry {
-    List<ModelInfo> modelsFor(Provider provider);
-    Optional<ModelInfo> find(Provider provider, String modelId);
-    Map<Provider, List<ModelInfo>> all();
+public Optional<ModelCatalog> catalogFor(Provider provider, String apiKey) {
+    return switch (provider) {
+        case OPENAI -> Optional.of(/* OpenAI ModelCatalog built with apiKey */);
+        // add other providers as LangChain4j support lands
+        default -> Optional.empty();
+    };
 }
 ```
 
-Initial implementation: hardcoded Java maps. The model list should be editable in a single file — engineer should expect to bump this file when new models ship. Example entries:
+`GET /models` calls `catalogFor` for each known `Provider`, invokes `listModels()` on the returned catalog, and maps the resulting `ModelDescription` objects to the response. `ModelDescription` fields used in the response:
 
-```java
-Map.of(
-    Provider.ANTHROPIC, List.of(
-        new ModelInfo("claude-opus-4-7", "Claude Opus 4.7", 200_000, true),
-        new ModelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6", 200_000, true)
-    ),
-    Provider.OPENAI, List.of(
-        new ModelInfo("gpt-4o", "GPT-4o", 128_000, true)
-    )
-);
-```
+| `ModelDescription` field | Response field | Notes |
+|--------------------------|----------------|-------|
+| `name()` | `id` | Always present |
+| `displayName()` | `displayName` | Falls back to `name()` if null |
+| `type()` | `type` | Omitted if null |
+| `maxInputTokens()` | `maxInputTokens` | Omitted if null |
+| `maxOutputTokens()` | `maxOutputTokens` | Omitted if null |
+
+For providers that require a user API key to list models, the endpoint passes the calling user's decrypted key. If the user has no stored key for that provider, that provider is skipped. For OpenAI, the application-level `TITLE_GENERATION_OPENAI_KEY` is sufficient and can be used as a fallback so the model list is always available without a user key.
 
 ### 8.4 Chat Memory Hydration
 
 For each streaming request:
 
-1. Load all prior messages for the chat (`SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at ASC`).
+1. Load the most recent `<memory-max-messages>` messages for the chat using a JPA repository query. Prefer JPA repositories over raw SQL throughout the codebase. Example:
+   ```java
+   messageRepository.findTopNByChatIdOrderByCreatedAtDesc(chatId, memoryMaxMessages)
+   ```
+   Reverse the result before building the memory window to restore chronological order.
 2. Construct a `MessageWindowChatMemory` with `maxMessages = 100` (configurable).
-3. For each row, add to memory:
+3. For each DB row, add to memory:
    - `role = 'user'` → `UserMessage.from(content.message)`
    - `role = 'assistant'` → `AiMessage.from(content.message)`
-4. Add the new user message to memory before invoking the model.
-5. Pass memory to the `StreamingChatLanguageModel` via LangChain4j's `AiServices` or by converting memory to a `List<ChatMessage>` and calling `model.generate(messages, handler)`.
+4. Do **not** add the new user message to memory manually — pass it as the `@UserMessage` argument to `ChatAssistant.chat()`; LangChain4j adds it to memory automatically.
+5. Pass the hydrated `ChatMemory` to `ChatModelFactory.createAssistant()`.
 
-**Memory is not persisted beyond the request.** Each request rehydrates from the DB. This ensures correctness across restarts, multiple backend instances, and horizontal scaling.
+**Memory is not persisted beyond the request.** Each request rehydrates from the DB. This ensures correctness across restarts and horizontal scaling.
 
-### 8.5 Token Streaming Handler
+### 8.5 TokenStream Handler
 
-Implement a `StreamingResponseHandler<AiMessage>` that:
-- On `onNext(String token)` — emit SSE `token` event with `{"text": token}` and append token to an in-memory `StringBuilder`.
-- On `onComplete(Response<AiMessage> response)` — persist the buffered text as a new `messages` row, bump `chats.updated_at`, emit `done` event.
-- On `onError(Throwable e)` — log, persist whatever was buffered (if non-empty), emit `error` event, close the stream.
+Wire `TokenStream` callbacks after calling `assistant.chat(userMessage)`:
+
+```java
+StringBuilder buffer = new StringBuilder();
+
+assistant.chat(userMessage)
+    .onPartialResponse(token -> {
+        buffer.append(token);
+        emitter.send(SseEmitter.event().name("token").data(Map.of("text", token)));
+    })
+    .onCompleteResponse(response -> {
+        // persist assistant message, bump updated_at, emit done + title events
+    })
+    .onError(e -> {
+        // persist buffered partial text if non-empty, emit error event
+    })
+    .start();
+```
+
+`TokenStream.start()` is non-blocking; the callbacks fire on LangChain4j's internal thread. The `SseEmitter` is already on its own executor thread (see §9), so emitting from these callbacks is safe.
 
 ---
 
@@ -537,7 +633,11 @@ public SseEmitter createChat(@Valid @RequestBody NewChatRequest req, @CurrentUse
 }
 ```
 
-The `chatService.streamNewChat` method should do its work on a separate thread (use a dedicated `ExecutorService` bean sized for expected concurrent streams — start with a fixed pool of 50, make it configurable). The controller returns immediately.
+The `chatService.streamNewChat` method should do its work on a separate thread (use a dedicated `ExecutorService` bean sized for expected concurrent streams — start with a fixed pool of 50, make it configurable).
+
+> **Note on pool size:** A fixed pool of 50 means a maximum of 50 concurrent streaming sessions. With a 5-minute SSE timeout this is the hard concurrency ceiling for a single instance. Acceptable for v1; revisit when horizontal scaling is needed.
+
+The controller returns immediately.
 
 **Always call `emitter.complete()` in a `finally` block.** On error, call `emitter.completeWithError(ex)`.
 
@@ -548,12 +648,14 @@ emitter.send(SseEmitter.event().name("token").data(Map.of("text", token)));
 
 ---
 
-## 10. Rate Limiting
+## 10. Rate Limiting *(Deferred — post-v1)*
 
-Use Bucket4j with an in-memory bucket per user (acceptable for single-instance v1; move to Redis-backed buckets when scaling horizontally).
+> Rate limiting is deferred until after v1. The design below is the intended approach; do not implement until the rest of the backend is stable.
+
+Use Bucket4j with an in-memory bucket per user (acceptable for single-instance; move to Redis-backed buckets when scaling horizontally).
 
 **Limits:**
-- `POST /api/chats` and `POST /api/chats/{chatId}/messages`: 30 requests per minute per user.
+- `POST /chats` and `POST /chats/{chatId}/messages`: 30 requests per minute per user.
 - All other endpoints: 120 requests per minute per user.
 
 On exceed: return `429 Too Many Requests` with header `Retry-After: <seconds>`.
@@ -590,34 +692,41 @@ Implement via a `@RestControllerAdvice` with `@ExceptionHandler` methods.
 
 ## 12. Configuration
 
-`application.yml` keys the engineer must wire:
+`application.properties` keys the engineer must wire:
 
-```yaml
-spring:
-  datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: validate   # Flyway owns schema
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://accounts.google.com
-          audiences: [${GOOGLE_OAUTH_CLIENT_ID}]
+```properties
+# Datasource
+spring.datasource.url=${DATABASE_URL}
+spring.datasource.username=${DATABASE_USER}
+spring.datasource.password=${DATABASE_PASSWORD}
+spring.jpa.hibernate.ddl-auto=validate
 
-app:
-  encryption:
-    master-key: ${API_KEY_ENCRYPTION_KEY}   # base64 32 bytes
-  chat:
-    memory-max-messages: 100
-    sse-timeout-ms: 300000
-    streaming-executor-pool-size: 50
-  rate-limit:
-    chat-rpm: 30
-    default-rpm: 120
+# Google OAuth2
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID:}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET:}
+spring.security.oauth2.client.registration.google.scope=openid,email,profile
+spring.security.oauth2.client.registration.google.redirect-uri={baseUrl}/auth/callback/google
+spring.security.oauth2.client.registration.google.authorization-grant-type=authorization_code
+
+# Auth
+app.auth.frontend-origin=${FRONTEND_ORIGIN}
+app.auth.post-login-redirect=${FRONTEND_ORIGIN}
+
+# Encryption
+app.encryption.master-key=${API_KEY_ENCRYPTION_KEY}
+
+# Title generation
+app.title-generation.openai-api-key=${TITLE_GENERATION_OPENAI_KEY}
+app.title-generation.model=gpt-4o-mini
+
+# Chat
+app.chat.memory-max-messages=100
+app.chat.sse-timeout-ms=300000
+app.chat.streaming-executor-pool-size=50
+
+# Rate limiting (deferred — see §10)
+app.rate-limit.chat-rpm=30
+app.rate-limit.default-rpm=120
 ```
 
 ---
@@ -627,9 +736,15 @@ app:
 ```
 com.example.llmchat
 ├── auth/
-│   ├── GoogleJwtAuthenticationConverter.java
+│   ├── SecurityConfig.java
+│   ├── OAuth2LoginSuccessHandler.java
+│   ├── OAuth2LoginFailureHandler.java
+│   ├── AuthController.java
+│   ├── SessionUser.java
 │   ├── UserPrincipal.java
-│   ├── CurrentUserArgumentResolver.java
+│   ├── User.java
+│   ├── UserRepository.java
+│   ├── JpaUserRepository.java
 │   └── UserProvisioningService.java
 ├── apikeys/
 │   ├── ApiKeyController.java
@@ -646,20 +761,17 @@ com.example.llmchat
 │   └── MessageRepository.java
 ├── models/
 │   ├── ModelController.java
-│   ├── ModelRegistry.java
 │   └── Provider.java
 ├── llm/
-│   ├── StreamingModelFactory.java
-│   ├── StreamingModelRouter.java
-│   ├── AnthropicStreamingModelFactory.java
-│   ├── OpenAiStreamingModelFactory.java
-│   └── TitleGenerator.java
+│   ├── ChatModelFactory.java
+│   ├── ChatAssistant.java
+│   └── TitleGenerationService.java
 ├── crypto/
 │   ├── CryptoService.java
 │   └── EncryptedValue.java
 ├── common/
 │   ├── GlobalExceptionHandler.java
-│   ├── RateLimitInterceptor.java
+│   ├── RateLimitInterceptor.java   (deferred — see §10)
 │   └── ApiError.java
 └── LlmChatApplication.java
 ```
@@ -670,13 +782,12 @@ com.example.llmchat
 
 Engineer should provide:
 - **Unit tests** for `CryptoService` (encrypt/decrypt round-trip, AAD mismatch detection, tamper detection).
-- **Unit tests** for `ModelRegistry` lookups.
 - **Integration tests** using Testcontainers (PostgreSQL) for:
   - Api key upsert behavior.
   - Chat creation persists user message before first token.
-  - `GET /api/chats/{chatId}/messages` returns 404 for another user's chat.
+  - `GET /chats/{chatId}/messages` returns 404 for another user's chat.
   - Ownership checks on all chat-scoped endpoints.
-- **SSE integration test** using `WebTestClient` that verifies the event sequence (`chat_created`, `token`+, `done`, `title`) for `POST /api/chats`. LangChain4j model calls should be mocked via a fake `StreamingChatLanguageModel` that emits a fixed token sequence.
+- **SSE integration test** using `WebTestClient` that verifies the event sequence (`chat_created`, `token`+, `done`, `title`) for `POST /chats`. LangChain4j model calls should be mocked via a fake `StreamingChatLanguageModel` that emits a fixed token sequence.
 
 ---
 
