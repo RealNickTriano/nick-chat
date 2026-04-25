@@ -1,4 +1,5 @@
 import type { ChatStreamEvent, ChatStreamRequest } from "@/types/chat";
+import { getCsrfToken } from "./get-csrf-token";
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
@@ -7,10 +8,15 @@ export async function* chatStream(
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
   let response: Response;
+  const xsrfToken = getCsrfToken();
   try {
     response = await fetch(`${baseURL}/chat`, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "text/event-stream" },
+      headers: {
+        "content-type": "application/json",
+        accept: "text/event-stream",
+        "X-XSRF-TOKEN": xsrfToken ?? "",
+      },
       body: JSON.stringify(request),
       credentials: "include",
       signal,
