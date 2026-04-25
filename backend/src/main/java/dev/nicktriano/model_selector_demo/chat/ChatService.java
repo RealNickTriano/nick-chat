@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,6 +21,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.nicktriano.model_selector_demo.auth.CurrentUserId;
 import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
 import dev.nicktriano.model_selector_demo.model_selector.ModelSelectorService;
 
@@ -28,18 +30,31 @@ public class ChatService {
 
   private static final Logger logger = Logger.getLogger(ChatService.class.getName());
 
+  private ChatRepository chatRepository;
+  private MessageRepository messageRepository;
+
   private final ModelSelectorService catalogs;
   private final String openAiApiKey;
   private final String anthropicApiKey;
 
   public ChatService(
+    ChatRepository chatRepository,
+    MessageRepository messageRepository,
+
     ModelSelectorService catalogs,
     @Value("${app.openai.key}") String openAiApiKey,
     @Value("${app.anthropic.key}") String anthropicApiKey
   ) {
+    this.chatRepository = chatRepository;
+    this.messageRepository = messageRepository;
+
     this.catalogs = catalogs;
     this.openAiApiKey = openAiApiKey;
     this.anthropicApiKey = anthropicApiKey;
+  }
+
+  public ChatEntity newChat(UUID userId) {
+    return chatRepository.save(new ChatEntity(userId));
   }
 
   public ResolvedRequest validate(ChatStreamRequest request) {
@@ -49,7 +64,7 @@ public class ChatService {
     return new ResolvedRequest(provider, request.model(), lcMessages);
   }
 
-  public void stream(ResolvedRequest resolved, SseEmitter emitter) {
+  public void stream(ResolvedRequest resolved, UUID chatId, SseEmitter emitter) {
     StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model());
     ChatRequest lcRequest = ChatRequest.builder().messages(resolved.messages()).build();
 
@@ -61,6 +76,13 @@ public class ChatService {
 
       @Override
       public void onCompleteResponse(ChatResponse response) {
+        messageRepository.save(new MessageEntity(
+          chatId,
+          "assistant",
+          response.aiMessage().text(),
+          resolved.provider().name(),
+          resolved.model()
+        ));
         send(emitter, Map.of("type", "done"));
         emitter.complete();
       }

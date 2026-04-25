@@ -1,6 +1,7 @@
 package dev.nicktriano.model_selector_demo.chat;
 
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,22 +12,29 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import dev.nicktriano.model_selector_demo.auth.CurrentUserId;
+
 @RestController
 public class ChatController {
 
   private static final long TIMEOUT_MS = 5L * 60L * 1000L;
 
   private final ChatService chatService;
+  private final MessageRepository messageRepository;
 
-  public ChatController(ChatService chatService) {
+  public ChatController(ChatService chatService, MessageRepository messageRepository) {
     this.chatService = chatService;
+    this.messageRepository = messageRepository;
   }
 
   @PostMapping("/chat")
-  public SseEmitter chat(@RequestBody ChatStreamRequest body) {
+  public SseEmitter chat(@CurrentUserId UUID userId, @RequestBody ChatStreamRequest body) {
+    ChatEntity chatEntity = chatService.newChat(userId);
+
     ChatService.ResolvedRequest resolved = chatService.validate(body);
+    messageRepository.save(new MessageEntity(chatEntity.getId(), "user", body.messages().get(0).content(), resolved.provider().name(), resolved.model()));
     SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
-    chatService.stream(resolved, emitter);
+    chatService.stream(resolved, chatEntity.getId(), emitter);
     return emitter;
   }
 

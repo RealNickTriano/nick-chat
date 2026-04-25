@@ -45,4 +45,12 @@ public class MessageEntity {
   @CreatedDate
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
+
+  public MessageEntity(UUID chatId, String role, String content, String provider, String model) {
+    this.chatId = chatId;
+    this.role = role;
+    this.content = content;
+    this.provider = provider;
+    this.model = model;
+  }
 }

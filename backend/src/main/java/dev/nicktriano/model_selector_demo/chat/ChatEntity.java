@@ -42,4 +42,13 @@ public class ChatEntity {
   @LastModifiedDate
   @Column(nullable = false)
   private Instant updatedAt;
+
+  public ChatEntity(UUID userId) {
+    this.userId = userId;
+  }
+
+  public ChatEntity(UUID userId, String title) {
+    this.userId = userId;
+    this.title = title;
+  }
 }
