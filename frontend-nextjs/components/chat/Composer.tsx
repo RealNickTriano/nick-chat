@@ -5,7 +5,6 @@ import type { ChangeEvent, KeyboardEvent } from "react";
 import type { Model, ProviderId } from "@/types/model";
 import { ModelSelector } from "./ModelSelector";
 import { SendButton } from "./SendButton";
-import { ProviderLogo } from "./ProviderLogo";
 
 interface ComposerProps {
   onSubmit: (payload: { text: string; model: string; provider: ProviderId }) => void;
@@ -20,7 +19,6 @@ export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
   const [model, setModel] = useState<Model | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize: reset to auto, then clamp to MAX_ROWS worth of line-height.
   useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -53,20 +51,19 @@ export function Composer({ onSubmit, disabled, placeholder }: ComposerProps) {
   };
 
   return (
-    <div className="flex flex-col rounded-xl border border-neutral-200 bg-white shadow-sm transition-colors focus-within:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-within:border-neutral-600">
+    <div className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--bg)] shadow-sm transition-colors focus-within:border-[var(--text3)]">
       <textarea
         ref={textareaRef}
         value={text}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder ?? "Ask anything..."}
+        placeholder={placeholder ?? "How can I help you today? (Shift+Enter for newline)"}
         rows={1}
         aria-label="Message"
-        className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-base leading-6 chat-scroll text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+        className="chat-scroll w-full resize-none bg-transparent px-4 pt-3 pb-1 text-base leading-6 text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none"
       />
-      <div className="flex items-center justify-between border-t border-neutral-200 px-2 py-2 dark:border-neutral-800">
+      <div className="flex items-center justify-between border-t border-[var(--border)] px-3 py-2">
         <ModelSelector value={model?.id ?? null} onChange={setModel} />
-        {model?.provider && <ProviderLogo provider={model?.provider} />}
         <SendButton onClick={submit} disabled={!canSubmit} />
       </div>
     </div>

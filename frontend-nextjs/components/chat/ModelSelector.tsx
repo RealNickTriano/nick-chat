@@ -51,6 +51,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         label={label}
         open={open}
         onClick={() => setOpen(true)}
+        providerId={selected?.provider}
       />
 
       <ModelSelectionModal open={open} onClose={close} value={value} onPick={pick} />

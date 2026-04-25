@@ -9,6 +9,16 @@ export interface Message {
   content: string;
   status: MessageStatus;
   error?: string;
+  providerId?: string;
+  tokens?: number;
+  cost?: number;
+}
+
+export interface Chat {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ChatStreamRequest {

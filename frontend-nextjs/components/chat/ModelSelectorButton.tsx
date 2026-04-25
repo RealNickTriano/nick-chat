@@ -1,15 +1,26 @@
 "use client";
 
 import type { Ref } from "react";
+import { ChevronDownIcon } from "@/components/svg/ChevronDown";
+import { providerColor } from "@/components/chat/AgentAvatar";
+import type { ProviderId } from "@/types/model";
 
 interface ModelSelectorButtonProps {
   label: string;
   open: boolean;
   onClick: () => void;
+  providerId?: ProviderId;
   ref?: Ref<HTMLButtonElement>;
 }
 
-export function ModelSelectorButton({ label, open, onClick, ref }: ModelSelectorButtonProps) {
+export function ModelSelectorButton({
+  label,
+  open,
+  onClick,
+  providerId,
+  ref,
+}: ModelSelectorButtonProps) {
+  const dotColor = providerId ? providerColor(providerId) : "var(--text3)";
   return (
     <button
       ref={ref}
@@ -17,9 +28,15 @@ export function ModelSelectorButton({ label, open, onClick, ref }: ModelSelector
       onClick={onClick}
       aria-haspopup="dialog"
       aria-expanded={open}
-      className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-neutral-200 bg-transparent px-2.5 text-sm text-neutral-800 transition-colors hover:border-neutral-400 hover:bg-neutral-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:border-neutral-800 dark:text-neutral-200 dark:hover:border-neutral-600 dark:hover:bg-neutral-900 dark:focus-visible:outline-white"
+      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--bg2)] px-2.5 py-[5px] text-xs text-[var(--text)] transition-colors hover:bg-[var(--bg3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
     >
+      <span
+        aria-hidden="true"
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ background: dotColor }}
+      />
       <span>{label}</span>
+      <ChevronDownIcon className="text-[var(--text3)]" />
     </button>
   );
 }

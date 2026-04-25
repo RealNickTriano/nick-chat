@@ -1,23 +1,28 @@
 "use client";
 
 import { ChatError } from "@/components/chat/ChatError";
+import { useChat } from "@/components/chat/ChatProvider";
 import { Composer } from "@/components/chat/Composer";
 import { Conversation } from "@/components/chat/Conversation";
-import { useChatStream } from "@/hooks/use-chat-stream";
 
 export default function Home() {
-  const { messages, send, status, error } = useChatStream();
+  const { messages, send, status, error } = useChat();
 
   return (
-    <main className="flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8 max-h-full">
+    <main className="flex min-h-0 flex-1 flex-col">
       <Conversation messages={messages} />
 
-      {status === "error" && <ChatError message={error} />}
-
-      <Composer
-        onSubmit={({ text, model, provider }) => send(text, model, provider)}
-        disabled={status === "streaming"}
-      />
+      <div className="border-t border-[var(--border)] bg-[var(--bg)] px-6 py-4">
+        {status === "error" && (
+          <div className="mb-2">
+            <ChatError message={error} />
+          </div>
+        )}
+        <Composer
+          onSubmit={({ text, model, provider }) => send(text, model, provider)}
+          disabled={status === "streaming"}
+        />
+      </div>
     </main>
   );
 }

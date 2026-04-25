@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightIcon } from "@/components/svg/ArrowRight";
+import { SendIcon } from "@/components/svg/Send";
 
 interface SendButtonProps {
   onClick: () => void;
@@ -14,10 +14,14 @@ export function SendButton({ onClick, disabled }: SendButtonProps) {
       onClick={onClick}
       disabled={disabled}
       aria-label="Send message"
-      className="inline-flex h-8 items-center gap-1.5 rounded-md bg-neutral-900 px-3 text-sm font-medium text-white transition-colors hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200 dark:focus-visible:outline-white"
+      className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+        disabled
+          ? "cursor-not-allowed bg-[var(--bg3)] text-[var(--text3)]"
+          : "cursor-pointer bg-[var(--accent)] text-white hover:opacity-90"
+      }`}
     >
+      <SendIcon size={13} />
       <span>Send</span>
-      <ArrowRightIcon />
     </button>
   );
 }

@@ -1,32 +1,61 @@
 import type { Message as ChatMessage } from "@/types/chat";
+import type { ProviderId } from "@/types/model";
+import { providerLabel } from "@/lib/models";
+import { AgentAvatar, providerColor } from "./AgentAvatar";
 
 interface MessageProps {
   message: ChatMessage;
 }
 
 export function Message({ message }: MessageProps) {
-  const isUser = message.role === "user";
+  if (message.role === "user") {
+    return (
+      <div className="flex w-full justify-end">
+        <div
+          className="max-w-[62%] bg-[var(--accent)] px-[15px] py-2.5 text-sm leading-relaxed text-white"
+          style={{ borderRadius: "18px 18px 4px 18px" }}
+        >
+          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        </div>
+      </div>
+    );
+  }
+
+  const providerId = (message.providerId ?? "") as ProviderId;
+  const color = providerColor(providerId);
+  const label = providerId ? providerLabel(providerId) : "Assistant";
 
   return (
-    <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={
-          isUser
-            ? "max-w-[80%] rounded-2xl bg-neutral-900 px-4 py-2 text-sm text-neutral-50 dark:bg-neutral-100 dark:text-neutral-900"
-            : "max-w-[80%] rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
-        }
-      >
-        <div className="whitespace-pre-wrap break-words">
-          {message.content}
-          {message.status === "streaming" && (
-            <span
-              aria-hidden="true"
-              className="ml-0.5 inline-block h-4 w-[2px] translate-y-[3px] animate-pulse bg-current opacity-60"
-            />
+    <div className="flex w-full items-start gap-2.5">
+      <AgentAvatar providerId={providerId} />
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-1.5">
+          <span className="font-mono text-xs font-semibold" style={{ color }}>
+            {label}
+          </span>
+        </div>
+        <div
+          className="bg-[var(--bg2)] px-[15px] py-2.5 text-sm leading-[1.65] text-[var(--text)]"
+          style={{ borderRadius: "4px 18px 18px 18px" }}
+        >
+          <div className="whitespace-pre-wrap break-words">
+            {message.content}
+            {message.status === "streaming" && (
+              <span
+                aria-hidden="true"
+                className="ml-0.5 inline-block h-4 w-[2px] translate-y-[3px] animate-pulse bg-current opacity-60"
+              />
+            )}
+          </div>
+          {message.status === "error" && message.error && (
+            <div className="mt-1 text-xs text-red-600 dark:text-red-400">{message.error}</div>
           )}
         </div>
-        {message.status === "error" && message.error && (
-          <div className="mt-1 text-xs text-red-600 dark:text-red-400">{message.error}</div>
+        {(message.tokens !== undefined || message.cost !== undefined) && (
+          <div className="mt-[5px] flex gap-3 font-mono text-[11px] text-[var(--text3)]">
+            {message.tokens !== undefined && <span>{message.tokens} tok</span>}
+            {message.cost !== undefined && <span>${message.cost.toFixed(4)}</span>}
+          </div>
         )}
       </div>
     </div>
