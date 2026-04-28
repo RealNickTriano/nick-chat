@@ -1,4 +1,9 @@
-export type ProviderId = "OPEN_AI" | "ANTHROPIC" | "GOOGLE" | "MISTRAL" | (string & {});
+export type ProviderId =
+  | "OPEN_AI"
+  | "ANTHROPIC"
+  | "GOOGLE_AI_GEMINI"
+  | "MISTRAL_AI"
+  | (string & {});
 
 export interface Model {
   id: string;

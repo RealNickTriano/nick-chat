@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { Chat } from "@/types/chat";
 import { ChatHistory } from "./ChatHistory";
 import { NewChatButton } from "./NewChatButton";
 import { LeftSidebarHeader } from "./LeftSidebarHeader";
 import { UserBanner } from "./UserBanner";
+import { ApiKeysModal } from "../api-keys/ApiKeysModal";
 
 interface LeftSidebarProps {
   open: boolean;
@@ -25,6 +27,8 @@ export function LeftSidebar({
   onSelectChat,
   onNewChat,
 }: LeftSidebarProps) {
+  const [keysOpen, setKeysOpen] = useState(false);
+
   return (
     <div
       className="flex h-full overflow-hidden border-r border-[var(--border)] bg-[var(--bg)] transition-[width,min-width] duration-200 ease-out"
@@ -40,7 +44,8 @@ export function LeftSidebar({
 
         <ChatHistory chats={chats} activeChatId={activeChatId} onSelectChat={onSelectChat} />
 
-        <UserBanner />
+        <ApiKeysModal open={keysOpen} onClose={() => setKeysOpen(false)} />
+        <UserBanner onClick={() => setKeysOpen(true)} />
       </div>
     </div>
   );

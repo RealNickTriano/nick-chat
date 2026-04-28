@@ -38,6 +38,10 @@
   --agent-c: oklch(62% 0.14 30);
 }
 
+button {
+  cursor: pointer;
+}
+
 .chat-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;

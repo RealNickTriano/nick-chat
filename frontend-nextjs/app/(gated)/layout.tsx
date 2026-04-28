@@ -37,9 +37,9 @@ function Shell({ children }: { children: ReactNode }) {
         <TopBar
           title={title}
           leftOpen={leftOpen}
-          rightOpen={rightOpen}
+          // rightOpen={rightOpen}
           onToggleLeft={() => setLeftOpen((o) => !o)}
-          onToggleRight={() => setRightOpen((o) => !o)}
+          // onToggleRight={() => setRightOpen((o) => !o)}
         />
         {children}
       </div>

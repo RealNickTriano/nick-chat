@@ -2,7 +2,6 @@
 
 import { providerColor } from "@/components/chat/AgentAvatar";
 import { ChevronRightIcon } from "@/components/svg/ChevronRight";
-import { TrashIcon } from "@/components/svg/Trash";
 import { providerLabel } from "@/lib/models";
 import type { Message } from "@/types/chat";
 import type { ProviderId } from "@/types/model";

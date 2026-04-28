@@ -1,6 +1,5 @@
 "use client";
 
-import { BarChartIcon } from "@/components/svg/BarChart";
 import { ChevronRightIcon } from "@/components/svg/ChevronRight";
 import { LayersIcon } from "@/components/svg/Layers";
 import { ThemeToggle } from "./ThemeToggle";
@@ -9,9 +8,9 @@ interface TopBarProps {
   title: string;
   subtitle?: string;
   leftOpen: boolean;
-  rightOpen: boolean;
+  // rightOpen: boolean;
   onToggleLeft: () => void;
-  onToggleRight: () => void;
+  // onToggleRight: () => void;
 }
 
 const iconButton =
@@ -21,9 +20,9 @@ export function TopBar({
   title,
   subtitle,
   leftOpen,
-  rightOpen,
+  // rightOpen,
   onToggleLeft,
-  onToggleRight,
+  // onToggleRight,
 }: TopBarProps) {
   return (
     <div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)] px-4 py-3">

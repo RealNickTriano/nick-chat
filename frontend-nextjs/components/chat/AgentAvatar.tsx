@@ -11,7 +11,7 @@ export function providerColor(providerId: ProviderId): string {
       return "var(--agent-a)";
     case "ANTHROPIC":
       return "var(--agent-b)";
-    case "GOOGLE":
+    case "GOOGLE_AI_GEMINI":
       return "var(--agent-c)";
     default:
       return "var(--text3)";
@@ -24,9 +24,9 @@ function providerInitials(providerId: ProviderId): string {
       return "OA";
     case "ANTHROPIC":
       return "An";
-    case "GOOGLE":
+    case "GOOGLE_AI_GEMINI":
       return "Go";
-    case "MISTRAL":
+    case "MISTRAL_AI":
       return "Mi";
     default:
       return "?";

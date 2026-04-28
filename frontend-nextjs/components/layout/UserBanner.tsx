@@ -1,17 +1,21 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
-import { SettingsIcon } from "@/components/svg/Settings";
 import { UserIcon } from "@/components/svg/User";
 
-const iconButton =
-  "inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-[var(--text2)] transition-colors hover:bg-[var(--bg3)]";
+interface UserBannerProps {
+  onClick: () => void;
+}
 
-export function UserBanner() {
+export function UserBanner({ onClick }: UserBannerProps) {
   const { user } = useAuth();
 
   return (
-    <div className="flex items-center gap-2.5 border-t border-[var(--border)] px-3 pt-2.5 pb-3.5">
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full cursor-pointer items-center gap-2.5 border-t border-[var(--border)] bg-transparent px-3 pt-2.5 pb-3.5 text-left transition-colors duration-[120ms] ease-[ease] hover:bg-[var(--bg3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+    >
       <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[var(--bg3)] text-[var(--text2)]">
         <UserIcon size={15} />
       </div>
@@ -21,14 +25,6 @@ export function UserBanner() {
           {user?.email ?? "Not signed in"}
         </div>
       </div>
-      {/* <button
-        type="button"
-        className={iconButton}
-        aria-label="Settings"
-        title="Settings"
-      >
-        <SettingsIcon size={14} />
-      </button> */}
-    </div>
+    </button>
   );
 }

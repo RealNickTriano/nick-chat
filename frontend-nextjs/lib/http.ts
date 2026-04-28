@@ -8,6 +8,7 @@ export const http = axios.create({
   withCredentials: true,
   xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
+  withXSRFToken: true,
 });
 
 http.interceptors.response.use(
