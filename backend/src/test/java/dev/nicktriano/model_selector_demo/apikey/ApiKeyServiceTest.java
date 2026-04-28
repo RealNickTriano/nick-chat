@@ -1,8 +1,7 @@
 package dev.nicktriano.model_selector_demo.apikey;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -15,6 +14,9 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import dev.nicktriano.model_selector_demo.crypto.CryptoService;
@@ -27,9 +29,10 @@ class ApiKeyServiceTest {
   private ApiKeyService service;
 
   private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-  private static final String PROVIDER = "openai";
+  private static final String PROVIDER_INPUT = "OPEN_AI";
+  private static final String PROVIDER_STORED = "OPEN_AI"; // ModelProvider.OPEN_AI.name()
   private static final String RAW_KEY = "sk-abcdefghijklmnop";
-  private static final String AAD = USER_ID + ":" + PROVIDER;
+  private static final String AAD = USER_ID + ":" + PROVIDER_STORED;
 
   @BeforeEach
   void setUp() {
@@ -38,17 +41,69 @@ class ApiKeyServiceTest {
     service = new ApiKeyService(repository, cryptoService);
   }
 
+  // --- provider validation ---
+
+  @ParameterizedTest
+  @ValueSource(strings = { "invalid", "AMAZON_BEDROCK", "GITHUB_MODELS", "OTHER" })
+  void upsert_unsupportedProvider_throwsBadRequest(String provider) {
+    assertThatThrownBy(() -> service.upsert(USER_ID, provider, RAW_KEY))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+        .isEqualTo(HttpStatus.BAD_REQUEST.value());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "", "  " })
+  void upsert_blankProvider_throwsBadRequest(String provider) {
+    assertThatThrownBy(() -> service.upsert(USER_ID, provider, RAW_KEY))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+        .isEqualTo(HttpStatus.BAD_REQUEST.value());
+  }
+
   @Test
-  void upsert_newKey_createsEntity() {
-    EncryptedValue encrypted = new EncryptedValue("cipherB64", "ivB64");
-    when(cryptoService.encrypt(RAW_KEY, AAD)).thenReturn(encrypted);
-    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER)).thenReturn(Optional.empty());
+  void upsert_nullProvider_throwsBadRequest() {
+    assertThatThrownBy(() -> service.upsert(USER_ID, null, RAW_KEY))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+        .isEqualTo(HttpStatus.BAD_REQUEST.value());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "OPEN_AI", "open_ai", "Open_Ai" })
+  void upsert_providerIsCaseInsensitive(String provider) {
+    when(cryptoService.encrypt(any(), any())).thenReturn(new EncryptedValue("c", "i"));
+    when(repository.findByUserIdAndProvider(any(), any())).thenReturn(Optional.empty());
     when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER, RAW_KEY);
+    ApiKeyResponse response = service.upsert(USER_ID, provider, RAW_KEY);
 
-    assertEquals(PROVIDER, response.provider());
-    assertEquals("sk-a...mnop", response.keyMask());
+    assertThat(response.provider()).isEqualTo(PROVIDER_STORED);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "ANTHROPIC", "OPEN_AI", "GOOGLE_AI_GEMINI", "MISTRAL_AI" })
+  void upsert_allSupportedProviders_succeed(String provider) {
+    when(cryptoService.encrypt(any(), any())).thenReturn(new EncryptedValue("c", "i"));
+    when(repository.findByUserIdAndProvider(any(), any())).thenReturn(Optional.empty());
+    when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    assertThat(service.upsert(USER_ID, provider, RAW_KEY)).isNotNull();
+  }
+
+  // --- upsert behaviour ---
+
+  @Test
+  void upsert_newKey_createsEntityWithCorrectFields() {
+    EncryptedValue encrypted = new EncryptedValue("cipherB64", "ivB64");
+    when(cryptoService.encrypt(RAW_KEY, AAD)).thenReturn(encrypted);
+    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER_STORED)).thenReturn(Optional.empty());
+    when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER_INPUT, RAW_KEY);
+
+    assertThat(response.provider()).isEqualTo(PROVIDER_STORED);
+    assertThat(response.keyMask()).isEqualTo("sk-a...mnop");
     verify(cryptoService).encrypt(RAW_KEY, AAD);
     verify(repository).save(any(ApiKeyEntity.class));
   }
@@ -57,46 +112,32 @@ class ApiKeyServiceTest {
   void upsert_existingKey_updatesInPlace() {
     ApiKeyEntity existing = new ApiKeyEntity();
     existing.setUserId(USER_ID);
-    existing.setProvider(PROVIDER);
+    existing.setProvider(PROVIDER_STORED);
     existing.setEncryptedKey("oldCipher");
     existing.setKeyIv("oldIv");
     existing.setKeyMask("old...mask");
 
     EncryptedValue encrypted = new EncryptedValue("newCipher", "newIv");
     when(cryptoService.encrypt(RAW_KEY, AAD)).thenReturn(encrypted);
-    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER)).thenReturn(Optional.of(existing));
+    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER_STORED)).thenReturn(Optional.of(existing));
     when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-    service.upsert(USER_ID, PROVIDER, RAW_KEY);
+    service.upsert(USER_ID, PROVIDER_INPUT, RAW_KEY);
 
-    assertEquals("newCipher", existing.getEncryptedKey());
-    assertEquals("newIv", existing.getKeyIv());
+    assertThat(existing.getEncryptedKey()).isEqualTo("newCipher");
+    assertThat(existing.getKeyIv()).isEqualTo("newIv");
     verify(repository).save(existing);
   }
 
   @Test
-  void upsert_blankKey_throwsBadRequest() {
-    ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-        () -> service.upsert(USER_ID, PROVIDER, "  "));
-
-    assertEquals(400, ex.getStatusCode().value());
-  }
-
-  @Test
-  void upsert_nullKey_throwsBadRequest() {
-    assertThrows(ResponseStatusException.class,
-        () -> service.upsert(USER_ID, PROVIDER, null));
-  }
-
-  @Test
-  void upsert_mask_isFirstFourDotsLastFour() {
+  void upsert_mask_firstFourDotsLastFour() {
     when(cryptoService.encrypt(any(), any())).thenReturn(new EncryptedValue("c", "i"));
     when(repository.findByUserIdAndProvider(any(), any())).thenReturn(Optional.empty());
     when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER, "sk-abcdefghijklmnop");
+    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER_INPUT, "sk-abcdefghijklmnop");
 
-    assertEquals("sk-a...mnop", response.keyMask());
+    assertThat(response.keyMask()).isEqualTo("sk-a...mnop");
   }
 
   @Test
@@ -105,61 +146,85 @@ class ApiKeyServiceTest {
     when(repository.findByUserIdAndProvider(any(), any())).thenReturn(Optional.empty());
     when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER, "short");
+    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER_INPUT, "short");
 
-    assertEquals("...", response.keyMask());
+    assertThat(response.keyMask()).isEqualTo("...");
   }
+
+  // --- listKeys ---
 
   @Test
   void listKeys_returnsMappedResponses() {
-    ApiKeyEntity e1 = entityWith(PROVIDER, "mask1");
-    ApiKeyEntity e2 = entityWith("anthropic", "mask2");
+    ApiKeyEntity e1 = entityWith(PROVIDER_STORED, "sk-a...mnop");
+    ApiKeyEntity e2 = entityWith("ANTHROPIC", "sk-a...wxyz");
     when(repository.findByUserId(USER_ID)).thenReturn(List.of(e1, e2));
 
     List<ApiKeyResponse> result = service.listKeys(USER_ID);
 
-    assertEquals(2, result.size());
-    assertEquals(PROVIDER, result.get(0).provider());
-    assertEquals("anthropic", result.get(1).provider());
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0).provider()).isEqualTo(PROVIDER_STORED);
+    assertThat(result.get(1).provider()).isEqualTo("ANTHROPIC");
   }
 
   @Test
   void listKeys_noKeys_returnsEmptyList() {
     when(repository.findByUserId(USER_ID)).thenReturn(List.of());
 
-    assertTrue(service.listKeys(USER_ID).isEmpty());
+    assertThat(service.listKeys(USER_ID)).isEmpty();
+  }
+
+  // --- delete ---
+
+  @Test
+  void delete_delegatesToRepository_withNormalizedProvider() {
+    service.delete(USER_ID, PROVIDER_INPUT);
+
+    verify(repository).deleteByUserIdAndProvider(USER_ID, PROVIDER_STORED);
   }
 
   @Test
-  void delete_delegatesToRepository() {
-    service.delete(USER_ID, PROVIDER);
-
-    verify(repository).deleteByUserIdAndProvider(USER_ID, PROVIDER);
+  void delete_unknownProvider_throwsBadRequest() {
+    assertThatThrownBy(() -> service.delete(USER_ID, "invalid"))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+        .isEqualTo(HttpStatus.BAD_REQUEST.value());
   }
+
+  // --- getDecryptedKey ---
 
   @Test
   void getDecryptedKey_found_returnsPlaintext() {
     ApiKeyEntity entity = new ApiKeyEntity();
     entity.setEncryptedKey("cipherB64");
     entity.setKeyIv("ivB64");
-    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER)).thenReturn(Optional.of(entity));
+    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER_STORED)).thenReturn(Optional.of(entity));
     when(cryptoService.decrypt("cipherB64", "ivB64", AAD)).thenReturn(RAW_KEY);
 
-    String result = service.getDecryptedKey(USER_ID, PROVIDER);
+    String result = service.getDecryptedKey(USER_ID, PROVIDER_INPUT);
 
-    assertEquals(RAW_KEY, result);
+    assertThat(result).isEqualTo(RAW_KEY);
     verify(cryptoService).decrypt(eq("cipherB64"), eq("ivB64"), eq(AAD));
   }
 
   @Test
   void getDecryptedKey_notFound_throwsNotFound() {
-    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER)).thenReturn(Optional.empty());
+    when(repository.findByUserIdAndProvider(USER_ID, PROVIDER_STORED)).thenReturn(Optional.empty());
 
-    ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-        () -> service.getDecryptedKey(USER_ID, PROVIDER));
-
-    assertEquals(404, ex.getStatusCode().value());
+    assertThatThrownBy(() -> service.getDecryptedKey(USER_ID, PROVIDER_INPUT))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+        .isEqualTo(HttpStatus.NOT_FOUND.value());
   }
+
+  @Test
+  void getDecryptedKey_unknownProvider_throwsBadRequest() {
+    assertThatThrownBy(() -> service.getDecryptedKey(USER_ID, "invalid"))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+        .isEqualTo(HttpStatus.BAD_REQUEST.value());
+  }
+
+  // --- helpers ---
 
   private static ApiKeyEntity entityWith(String provider, String mask) {
     ApiKeyEntity e = new ApiKeyEntity();
