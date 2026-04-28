@@ -1,6 +1,7 @@
 package dev.nicktriano.model_selector_demo.apikey;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dev.nicktriano.model_selector_demo.auth.CurrentUserId;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api-keys")
@@ -28,14 +30,14 @@ public class ApiKeyController {
   public ResponseEntity<ApiKeyResponse> upsert(
       @CurrentUserId UUID userId,
       @PathVariable String provider,
-      @RequestBody UpsertApiKeyRequest request
+      @Valid @RequestBody UpsertApiKeyRequest request
   ) {
     return ResponseEntity.ok(apiKeyService.upsert(userId, provider, request.key()));
   }
 
   @GetMapping
-  public ResponseEntity<List<ApiKeyResponse>> list(@CurrentUserId UUID userId) {
-    return ResponseEntity.ok(apiKeyService.listKeys(userId));
+  public ResponseEntity<Map<String, List<ApiKeyResponse>>> list(@CurrentUserId UUID userId) {
+    return ResponseEntity.ok(Map.of("apiKeys", apiKeyService.listKeys(userId)));
   }
 
   @DeleteMapping("/{provider}")
