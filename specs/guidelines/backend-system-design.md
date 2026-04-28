@@ -190,7 +190,7 @@ CREATE INDEX idx_messages_chat_id_created_at ON messages(chat_id, created_at ASC
 
 All return JSON unless otherwise noted. All require an active session except `GET /health`.
 
-### 5.1 `POST /apiKeys`
+### 5.1 `POST /apiKeys` ✅ COMPLETED
 
 Saves or updates an API key for a provider.
 
@@ -225,7 +225,7 @@ Saves or updates an API key for a provider.
 - `400` — invalid provider or missing fields.
 - `401` — missing/invalid session.
 
-### 5.2 `GET /apiKeys`
+### 5.2 `GET /apiKeys` ✅ COMPLETED
 
 Returns which providers the authenticated user has configured API keys for. Metadata only — no keys.
 
@@ -239,7 +239,7 @@ Returns which providers the authenticated user has configured API keys for. Meta
 }
 ```
 
-### 5.3 `DELETE /apiKeys/{provider}`
+### 5.3 `DELETE /apiKeys/{provider}` ✅ COMPLETED
 
 Removes the stored API key for a provider.
 
