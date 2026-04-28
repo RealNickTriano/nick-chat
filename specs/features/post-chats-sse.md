@@ -81,7 +81,7 @@ data: {"message":"<description>","code":"PROVIDER_ERROR"}
 
 ## Implementation
 
-### 1. Rename request class and path
+### 1. Rename request class and path ✅ COMPLETED
 
 Rename `ChatStreamRequest` → `ChatRequest` (or update in place). Change the field from `List<Message> messages` to `String content`. Remove the inner `Message` record — it is no longer needed.
 
