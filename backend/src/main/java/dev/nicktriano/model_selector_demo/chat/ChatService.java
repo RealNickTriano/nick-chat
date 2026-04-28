@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.ModelProvider;
@@ -21,7 +20,6 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
-import dev.nicktriano.model_selector_demo.auth.CurrentUserId;
 import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
 import dev.nicktriano.model_selector_demo.model_selector.ModelSelectorService;
 
@@ -57,10 +55,10 @@ public class ChatService {
     return chatRepository.save(new ChatEntity(userId));
   }
 
-  public ResolvedRequest validate(ChatStreamRequest request) {
+  public ResolvedRequest validate(ApplicationChatRequest request) {
     ModelProvider provider = resolveProvider(request.provider());
     requireKnownModel(provider, request.model());
-    List<ChatMessage> lcMessages = toLangchainMessages(request.messages());
+    List<ChatMessage> lcMessages = List.of(UserMessage.from(request.content()));
     return new ResolvedRequest(provider, request.model(), lcMessages);
   }
 
@@ -141,24 +139,6 @@ public class ChatService {
       .build();
   }
 
-  private List<ChatMessage> toLangchainMessages(List<ChatStreamRequest.Message> messages) {
-    if (messages == null || messages.isEmpty()) {
-      throw new ChatValidationException("messages must not be empty");
-    }
-    List<ChatMessage> out = new ArrayList<>(messages.size());
-    for (ChatStreamRequest.Message m : messages) {
-      if (m.content() == null) {
-        throw new ChatValidationException("message content must not be null");
-      }
-      String role = m.role() == null ? "" : m.role().toLowerCase();
-      switch (role) {
-        case "user" -> out.add(UserMessage.from(m.content()));
-        case "assistant" -> out.add(new AiMessage(m.content()));
-        default -> throw new ChatValidationException("Unsupported role: " + m.role());
-      }
-    }
-    return out;
-  }
 
   public record ResolvedRequest(ModelProvider provider, String model, List<ChatMessage> messages) {}
 

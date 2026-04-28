@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import dev.nicktriano.model_selector_demo.auth.CurrentUserId;
+import jakarta.validation.Valid;
 
 @RestController
 public class ChatController {
@@ -27,12 +28,12 @@ public class ChatController {
     this.messageRepository = messageRepository;
   }
 
-  @PostMapping("/chat")
-  public SseEmitter chat(@CurrentUserId UUID userId, @RequestBody ChatStreamRequest body) {
+  @PostMapping(value = "/chats", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public SseEmitter chat(@CurrentUserId UUID userId, @Valid @RequestBody ApplicationChatRequest body) {
     ChatEntity chatEntity = chatService.newChat(userId);
 
     ChatService.ResolvedRequest resolved = chatService.validate(body);
-    messageRepository.save(new MessageEntity(chatEntity.getId(), "user", body.messages().get(0).content(), resolved.provider().name(), resolved.model()));
+    messageRepository.save(new MessageEntity(chatEntity.getId(), "user", body.content(), resolved.provider().name(), resolved.model()));
     SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
     chatService.stream(resolved, chatEntity.getId(), emitter);
     return emitter;
