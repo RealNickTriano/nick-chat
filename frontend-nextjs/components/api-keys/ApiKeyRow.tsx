@@ -74,6 +74,7 @@ export function ApiKeyRow({ apiKey, pending, error, onSave, onDelete }: ApiKeyRo
     }
     try {
       await onSave(trimmed);
+      setValidationError(undefined);
       setState("idle");
     } catch {
       // error surfaces via prop
