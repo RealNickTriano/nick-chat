@@ -151,6 +151,28 @@ class ApiKeyServiceTest {
     assertThat(response.keyMask()).isEqualTo("...");
   }
 
+  @Test
+  void upsert_keyExactly8Chars_maskIsDots() {
+    when(cryptoService.encrypt(any(), any())).thenReturn(new EncryptedValue("c", "i"));
+    when(repository.findByUserIdAndProvider(any(), any())).thenReturn(Optional.empty());
+    when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER_INPUT, "12345678");
+
+    assertThat(response.keyMask()).isEqualTo("...");
+  }
+
+  @Test
+  void upsert_keyExactly9Chars_maskShowsFirstAndLast() {
+    when(cryptoService.encrypt(any(), any())).thenReturn(new EncryptedValue("c", "i"));
+    when(repository.findByUserIdAndProvider(any(), any())).thenReturn(Optional.empty());
+    when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    ApiKeyResponse response = service.upsert(USER_ID, PROVIDER_INPUT, "123456789");
+
+    assertThat(response.keyMask()).isEqualTo("1234...6789");
+  }
+
   // --- listKeys ---
 
   @Test
