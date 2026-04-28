@@ -83,10 +83,10 @@ data: {"message":"<description>","code":"PROVIDER_ERROR"}
 
 ### 1. Rename request class and path
 
-Rename `ChatStreamRequest` → `NewChatRequest` (or update in place). Change the field from `List<Message> messages` to `String content`. Remove the inner `Message` record — it is no longer needed.
+Rename `ChatStreamRequest` → `ChatRequest` (or update in place). Change the field from `List<Message> messages` to `String content`. Remove the inner `Message` record — it is no longer needed.
 
 ```java
-public record NewChatRequest(
+public record ChatRequest(
     @NotBlank String provider,
     @NotBlank String model,
     @NotBlank @Size(max = 100_000) String content
@@ -266,7 +266,7 @@ Remove `ChatConfig.java` from the package layout below.
 chat/
 ├── ChatController.java          (update: path, @Valid, inject service deps)
 ├── ChatService.java             (update: user key lookup, memory hydration, events, executor)
-├── NewChatRequest.java          (rename/rewrite from ChatStreamRequest)
+├── ChatRequest.java          (rename/rewrite from ChatStreamRequest)
 ├── TitleGenerationService.java  (new)
 ├── ChatEntity.java              (no change)
 ├── MessageEntity.java           (no change)
