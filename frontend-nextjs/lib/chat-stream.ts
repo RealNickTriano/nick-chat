@@ -6,11 +6,13 @@ const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 export async function* chatStream(
   request: ChatStreamRequest,
   signal?: AbortSignal,
+  chatId?: string | null,
 ): AsyncGenerator<ChatStreamEvent> {
   let response: Response;
   const xsrfToken = getCsrfToken();
+  const url = chatId ? `${baseURL}/chats/${chatId}` : `${baseURL}/chats`;
   try {
-    response = await fetch(`${baseURL}/chats`, {
+    response = await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -22,18 +24,22 @@ export async function* chatStream(
       signal,
     });
   } catch (err) {
-    yield { type: "error", message: errorMessage(err, "Network error") };
+    yield { event: "error", message: errorMessage(err, "Network error"), code: "NETWORK_ERROR" };
     return;
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    yield { type: "error", message: extractErrorMessage(text, response.status) };
+    yield {
+      event: "error",
+      message: extractErrorMessage(text, response.status),
+      code: "HTTP_ERROR",
+    };
     return;
   }
 
   if (!response.body) {
-    yield { type: "error", message: "Empty response body" };
+    yield { event: "error", message: "Empty response body", code: "EMPTY_BODY" };
     return;
   }
 
@@ -69,7 +75,7 @@ export async function* readEventStream(
       if (event) yield event;
     }
   } catch (err) {
-    yield { type: "error", message: errorMessage(err, "Stream error") };
+    yield { event: "error", message: errorMessage(err, "Stream error"), code: "STREAM_ERROR" };
   } finally {
     reader.releaseLock();
   }
