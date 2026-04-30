@@ -19,14 +19,12 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.ModelProvider;
-import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.nicktriano.model_selector_demo.apikey.ApiKeyService;
 import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
-import dev.nicktriano.model_selector_demo.model_selector.ModelSelectorService;
 
 @Service
 public class ChatService {
@@ -36,20 +34,17 @@ public class ChatService {
   private ChatRepository chatRepository;
   private MessageRepository messageRepository;
 
-  private final ModelSelectorService catalogs;
   private final ApiKeyService apiKeyService;
   private final TitleGenerationService titleGenerationService;
 
   public ChatService(
     ChatRepository chatRepository,
     MessageRepository messageRepository,
-    ModelSelectorService catalogs,
     ApiKeyService apiKeyService,
     TitleGenerationService titleGenerationService
   ) {
     this.chatRepository = chatRepository;
     this.messageRepository = messageRepository;
-    this.catalogs = catalogs;
     this.apiKeyService = apiKeyService;
     this.titleGenerationService = titleGenerationService;
   }
@@ -80,7 +75,6 @@ public class ChatService {
 
   public ResolvedRequest validate(ApplicationChatRequest request) {
     ModelProvider provider = resolveProvider(request.provider());
-    requireKnownModel(provider, request.model());
     return new ResolvedRequest(provider, request.model());
   }
 
@@ -152,21 +146,6 @@ public class ChatService {
       // falls through to the unsupported-provider error below
     }
     throw new ChatValidationException("Unsupported provider: " + provider);
-  }
-
-  private void requireKnownModel(ModelProvider provider, String model) {
-    if (model == null || model.isBlank()) {
-      throw new ChatValidationException("Missing model");
-    }
-    List<ModelDescription> catalog = switch (provider) {
-      case OPEN_AI -> catalogs.getOpenAiModels();
-      case ANTHROPIC -> catalogs.getAnthropicModels();
-      default -> throw new ChatValidationException("Unsupported provider: " + provider);
-    };
-    boolean found = catalog.stream().anyMatch(m -> model.equals(m.name()));
-    if (!found) {
-      throw new ChatValidationException("Unknown model for " + provider + ": " + model);
-    }
   }
 
   private CompletableFuture<Void> startTitleGeneration(String content, ChatEntity chat, SseEmitter emitter) {

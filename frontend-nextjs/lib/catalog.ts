@@ -4,12 +4,21 @@ import { useEffect, useState } from "react";
 import { http } from "./http";
 import type { Model, ProviderId } from "@/types/model";
 
-interface BackendModel {
-  name: string;
+interface BackendModelEntry {
+  id: string;
   displayName: string;
-  description: string | null;
+  type: string | null;
+  maxInputTokens: number | null;
+  maxOutputTokens: number | null;
+}
+
+interface BackendProviderModels {
   provider: ProviderId;
-  createdAt: string | null;
+  models: BackendModelEntry[];
+}
+
+interface BackendModelsResponse {
+  providers: BackendProviderModels[];
 }
 
 export type CatalogStatus = "loading" | "ready" | "error";
@@ -38,15 +47,17 @@ async function load(): Promise<Model[]> {
   if (inflight) return inflight;
 
   inflight = http
-    .get<BackendModel[]>("/catalog")
+    .get<BackendModelsResponse>("/models")
     .then((res) => {
-      cached = res.data.map((m) => ({
-        id: m.name,
-        label: m.displayName,
-        provider: m.provider,
-        description: m.description,
-        createdAt: m.createdAt,
-      }));
+      cached = res.data.providers.flatMap((pg) =>
+        pg.models.map((m) => ({
+          id: m.id,
+          label: m.displayName,
+          provider: pg.provider,
+          description: null,
+          createdAt: null,
+        })),
+      );
       lastError = null;
       notify({ status: "ready", models: cached, error: null });
       return cached;
