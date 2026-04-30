@@ -35,6 +35,11 @@ public class ChatController {
     return new GetChatsResponse(chatService.getChats(userId));
   }
 
+  @GetMapping("/chats/{chatId}/messages")
+  public GetChatMessagesResponse getChatMessages(@CurrentUserId UUID userId, @PathVariable UUID chatId) {
+    return new GetChatMessagesResponse(chatService.getMessages(chatId, userId));
+  }
+
   @PostMapping(value = "/chats", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public SseEmitter chat(@CurrentUserId UUID userId, @Valid @RequestBody ApplicationChatRequest body) {
     ChatEntity chatEntity = chatService.newChat(userId);

@@ -1,6 +1,7 @@
 package dev.nicktriano.model_selector_demo.chat;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,14 @@ public class ChatService {
   public ChatEntity getChat(UUID chatId, UUID userId) {
     return chatRepository.findByIdAndUserId(chatId, userId)
         .orElseThrow(ChatNotFoundException::new);
+  }
+
+  public List<MessageSummary> getMessages(UUID chatId, UUID userId) {
+    getChat(chatId, userId);
+    return messageRepository.findByChatIdOrderByCreatedAtAsc(chatId)
+        .stream()
+        .map(m -> new MessageSummary(m.getId(), m.getRole(), m.getProvider(), m.getModel(), m.getContent(), m.getCreatedAt()))
+        .toList();
   }
 
   public ResolvedRequest validate(ApplicationChatRequest request) {
@@ -189,6 +198,8 @@ public class ChatService {
 
 
   public record ResolvedRequest(ModelProvider provider, String model) {}
+
+  public record MessageSummary(UUID id, String role, String provider, String model, String content, Instant createdAt) {}
 
   private static void send(SseEmitter emitter, String name, Map<String, ?> data) {
     try {
