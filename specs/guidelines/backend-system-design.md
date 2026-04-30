@@ -254,7 +254,7 @@ Removes the stored API key for a provider.
 - `401` — missing/invalid session.
 - `404` — no key found for this user + provider.
 
-### 5.4 `POST /chats` → SSE
+### 5.4 `POST /chats` → SSE ✅ COMPLETED
 
 Creates a new chat and sends the first message. Responds with SSE stream.
 
@@ -269,64 +269,66 @@ Creates a new chat and sends the first message. Responds with SSE stream.
 
 **Validation:**
 - `provider`: required, must be in known-providers list.
-- `model`: required, must be a valid model id for that provider (§8.3).
-- `content`: required, non-blank, max 100,000 chars.
+- `model`: required, must be a valid model id for that provider (validated against LangChain4j's `ModelCatalog`).
+- `content`: required, non-blank.
 - User must have an `api_keys` row for `provider`; otherwise `400`.
 
 **Behavior:**
 1. Create a new `chats` row for the authenticated user with `title = null`.
-2. Insert the user message into `messages` (content as JSONB).
+2. Insert the user message into `messages` (content stored as plain text).
 3. Open SSE stream.
 4. Emit initial event containing the new `chatId` (so the client can route to `/chats/{chatId}`):
    ```
    event: chat_created
    data: {"chatId":"<uuid>"}
    ```
-5. Decrypt the user's API key for this provider (§7).
-6. Construct LangChain4j `StreamingChatLanguageModel` for the requested provider/model (§8.1).
-7. Construct chat memory hydrated from the messages of this chat (§8.4). For a brand-new chat this will contain just the one user message.
+5. Start title generation asynchronously on a virtual thread (§8.2).
+6. Decrypt the user's API key for this provider (§7).
+7. Construct LangChain4j `StreamingChatModel` and hydrate chat history from `messages` (§8.4).
 8. Stream assistant tokens; for each token emit:
    ```
    event: token
    data: {"text":"<partial text>"}
    ```
-9. On completion, emit:
+9. On completion, persist the full assistant response as a new `messages` row, then emit:
    ```
    event: done
    data: {"messageId":"<uuid>","finishReason":"stop"}
    ```
-10. Persist the full assistant response as a new `messages` row **once** at stream end (buffer approach — do not write on every token).
-11. Update `chats.updated_at`.
-12. Generate and persist `chats.title` from the first user message (§8.2). Emit:
+10. Wait for the title future (up to 10 s), then emit:
     ```
     event: title
     data: {"title":"<generated title>"}
     ```
+11. Close the stream.
 
-> **Client note:** The `title` event is emitted *after* `done`. Clients must keep the stream open until `title` (or `error`) is received — do not close on `done`.
+> **Client note:** The `title` event is emitted *after* `done`. Clients must keep the stream open until the stream closes — do not close on `done`.
 
 **Error handling during streaming:**
-- If the provider call fails mid-stream, emit:
+- If the provider call fails, emit:
   ```
   event: error
   data: {"message":"<error description>","code":"PROVIDER_ERROR"}
   ```
-  then close. Persist whatever partial assistant text was accumulated.
+  then close.
 
 **Response content type:** `text/event-stream`
 
-### 5.5 `POST /chats/{chatId}/messages` → SSE
+### 5.5 `POST /chats/{chatId}` → SSE ✅ COMPLETED
 
-Sends a new message to an existing chat.
+Sends a new message to an existing chat. The client calls this when it already has a `chatId` (i.e. on any follow-up message).
 
 **Request body:** Same shape as `POST /chats`.
 
 **Validation:**
-- `chatId` must exist and `chats.user_id` must equal the authenticated user. Otherwise `404` (do not leak existence of other users' chats).
+- Look up `ChatEntity` by `chatId` **and** `userId` in a single query. Return `404` if not found (covers both missing and wrong-owner cases — existence is not leaked).
 - All body validation same as `POST /chats`.
 
 **Behavior:**
-Steps 2–11 of `POST /chats`, skipping chat creation and title generation. The `chat_created` event is not emitted.
+Same as `POST /chats` except:
+- No new `chats` row is created; the existing `ChatEntity` is used directly.
+- Title generation is skipped if the chat already has a title (the `stream()` method no-ops when `chat.getTitle() != null`).
+- The `chat_created` event is still emitted for protocol consistency.
 
 ### 5.6 `GET /chats`
 
@@ -638,7 +640,7 @@ emitter.send(SseEmitter.event().name("token").data(Map.of("text", token)));
 Use Bucket4j with an in-memory bucket per user (acceptable for single-instance; move to Redis-backed buckets when scaling horizontally).
 
 **Limits:**
-- `POST /chats` and `POST /chats/{chatId}/messages`: 30 requests per minute per user.
+- `POST /chats` and `POST /chats/{chatId}`: 30 requests per minute per user.
 - All other endpoints: 120 requests per minute per user.
 
 On exceed: return `429 Too Many Requests` with header `Retry-After: <seconds>`.
