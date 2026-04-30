@@ -27,7 +27,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   }, [value, status, models, onChange]);
 
   const selected = value ? models.find((m) => m.id === value) : null;
-  const label = selected?.label ?? (status === "loading" ? "Loading models..." : "Select model");
+  const label =
+    selected?.displayName ?? (status === "loading" ? "Loading models..." : "Select model");
 
   const close = () => {
     setOpen(false);

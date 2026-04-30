@@ -19,7 +19,7 @@ export function ModelCard({ model, selected, onSelect }: ModelCardProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-          {model.label}
+          {model.displayName}
         </span>
         {selected && (
           <span className="text-neutral-900 dark:text-neutral-100">

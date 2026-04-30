@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { http } from "./http";
-import type { Model, ProviderId } from "@/types/model";
+import type { Model, ModelType, ProviderId } from "@/types/model";
 
 interface BackendModelEntry {
   id: string;
   displayName: string;
+  description: string | null;
   type: string | null;
   maxInputTokens: number | null;
   maxOutputTokens: number | null;
+  createdAt: string | null;
+  owner: string | null;
 }
 
 interface BackendProviderModels {
@@ -52,10 +55,14 @@ async function load(): Promise<Model[]> {
       cached = res.data.providers.flatMap((pg) =>
         pg.models.map((m) => ({
           id: m.id,
-          label: m.displayName,
+          displayName: m.displayName,
+          description: m.description,
           provider: pg.provider,
-          description: null,
-          createdAt: null,
+          type: m.type as ModelType | null,
+          maxInputTokens: m.maxInputTokens,
+          maxOutputTokens: m.maxOutputTokens,
+          createdAt: m.createdAt,
+          owner: m.owner,
         })),
       );
       lastError = null;

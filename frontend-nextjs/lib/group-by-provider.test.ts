@@ -5,10 +5,14 @@ import { groupByProvider } from "./group-by-provider";
 function model(overrides: Partial<Model> & Pick<Model, "id" | "provider">): Model {
   return {
     id: overrides.id,
-    label: overrides.label ?? overrides.id,
+    displayName: overrides.displayName ?? overrides.id,
     provider: overrides.provider,
     description: overrides.description ?? null,
+    type: overrides.type ?? null,
+    maxInputTokens: overrides.maxInputTokens ?? null,
+    maxOutputTokens: overrides.maxOutputTokens ?? null,
     createdAt: overrides.createdAt ?? null,
+    owner: overrides.owner ?? null,
   };
 }
 

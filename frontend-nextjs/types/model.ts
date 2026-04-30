@@ -5,10 +5,25 @@ export type ProviderId =
   | "MISTRAL_AI"
   | (string & {});
 
+export type ModelType =
+  | "CHAT"
+  | "EMBEDDING"
+  | "IMAGE_GENERATION"
+  | "AUDIO_TRANSCRIPTION"
+  | "AUDIO_GENERATION"
+  | "MODERATION"
+  | "SCORING"
+  | "OTHER"
+  | (string & {});
+
 export interface Model {
   id: string;
-  label: string;
-  provider: ProviderId;
+  displayName: string;
   description: string | null;
+  provider: ProviderId;
+  type: ModelType | null;
+  maxInputTokens: number | null;
+  maxOutputTokens: number | null;
   createdAt: string | null;
+  owner: string | null;
 }

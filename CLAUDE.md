@@ -61,6 +61,8 @@ nick-chat/
 - SVG icons live in `components/svg/`, never inlined
 - Each `ProviderLogo` branch sets its own `className`
 
+**After every frontend change:** run `npm run lint` and `npm run format` from `frontend-nextjs/`.
+
 ---
 
 ## Completed Endpoints
