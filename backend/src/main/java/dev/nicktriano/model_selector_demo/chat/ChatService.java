@@ -60,22 +60,24 @@ public class ChatService {
     StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model(), userId);
     ChatRequest lcRequest = ChatRequest.builder().messages(resolved.messages()).build();
 
+    send(emitter, "chat_created", Map.of("chatId", chatId.toString()));
+
     model.chat(lcRequest, new StreamingChatResponseHandler() {
       @Override
       public void onPartialResponse(String partial) {
-        send(emitter, Map.of("type", "delta", "text", partial));
+        send(emitter, "token", Map.of("text", partial));
       }
 
       @Override
       public void onCompleteResponse(ChatResponse response) {
-        messageRepository.save(new MessageEntity(
+        MessageEntity saved = messageRepository.save(new MessageEntity(
           chatId,
           "assistant",
           response.aiMessage().text(),
           resolved.provider().name(),
           resolved.model()
         ));
-        send(emitter, Map.of("type", "done"));
+        send(emitter, "done", Map.of("messageId", saved.getId().toString(), "finishReason", "stop"));
         emitter.complete();
       }
 
@@ -83,7 +85,7 @@ public class ChatService {
       public void onError(Throwable error) {
         logger.log(Level.WARNING, "Provider stream failed", error);
         String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
-        send(emitter, Map.of("type", "error", "message", message));
+        send(emitter, "error", Map.of("message", message, "code", "PROVIDER_ERROR"));
         emitter.complete();
       }
     });
@@ -132,11 +134,10 @@ public class ChatService {
 
   public record ResolvedRequest(ModelProvider provider, String model, List<ChatMessage> messages) {}
 
-  private static void send(SseEmitter emitter, Map<String, ?> event) {
+  private static void send(SseEmitter emitter, String name, Map<String, ?> data) {
     try {
-      emitter.send(SseEmitter.event().data(event));
+      emitter.send(SseEmitter.event().name(name).data(data));
     } catch (IOException e) {
-      // Client disconnected or stream closed; abort the emitter so the provider handler stops.
       emitter.completeWithError(e);
     }
   }
