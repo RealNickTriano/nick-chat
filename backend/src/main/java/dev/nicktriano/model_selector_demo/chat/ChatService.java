@@ -1,14 +1,12 @@
 package dev.nicktriano.model_selector_demo.chat;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -20,6 +18,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.nicktriano.model_selector_demo.apikey.ApiKeyService;
 import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
 import dev.nicktriano.model_selector_demo.model_selector.ModelSelectorService;
 
@@ -32,23 +31,18 @@ public class ChatService {
   private MessageRepository messageRepository;
 
   private final ModelSelectorService catalogs;
-  private final String openAiApiKey;
-  private final String anthropicApiKey;
+  private final ApiKeyService apiKeyService;
 
   public ChatService(
     ChatRepository chatRepository,
     MessageRepository messageRepository,
-
     ModelSelectorService catalogs,
-    @Value("${app.openai.key}") String openAiApiKey,
-    @Value("${app.anthropic.key}") String anthropicApiKey
+    ApiKeyService apiKeyService
   ) {
     this.chatRepository = chatRepository;
     this.messageRepository = messageRepository;
-
     this.catalogs = catalogs;
-    this.openAiApiKey = openAiApiKey;
-    this.anthropicApiKey = anthropicApiKey;
+    this.apiKeyService = apiKeyService;
   }
 
   public ChatEntity newChat(UUID userId) {
@@ -62,8 +56,8 @@ public class ChatService {
     return new ResolvedRequest(provider, request.model(), lcMessages);
   }
 
-  public void stream(ResolvedRequest resolved, UUID chatId, SseEmitter emitter) {
-    StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model());
+  public void stream(ResolvedRequest resolved, UUID chatId, UUID userId, SseEmitter emitter) {
+    StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model(), userId);
     ChatRequest lcRequest = ChatRequest.builder().messages(resolved.messages()).build();
 
     model.chat(lcRequest, new StreamingChatResponseHandler() {
@@ -125,12 +119,8 @@ public class ChatService {
     }
   }
 
-  private StreamingChatModel buildStreamingModel(ModelProvider provider, String model) {
-    String key = switch (provider) {
-      case OPEN_AI -> openAiApiKey;
-      case ANTHROPIC -> anthropicApiKey;
-      default -> throw new ChatValidationException("Unsupported provider: " + provider);
-    };
+  private StreamingChatModel buildStreamingModel(ModelProvider provider, String model, UUID userId) {
+    String key = apiKeyService.getDecryptedKey(userId, provider.name());
 
     return StreamingChatModelBuilder.builder()
       .apiKey(key)

@@ -72,7 +72,7 @@ public class ApiKeyService {
     String storedProvider = resolveProvider(provider).name();
     ApiKeyEntity entity = apiKeyRepository.findByUserIdAndProvider(userId, storedProvider)
         .orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND, "No key saved for provider: " + storedProvider));
+            HttpStatus.BAD_REQUEST, "No API key saved for provider: " + storedProvider));
     return cryptoService.decrypt(entity.getEncryptedKey(), entity.getKeyIv(), aad(userId, storedProvider));
   }
 
