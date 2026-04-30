@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -54,6 +55,13 @@ public class ChatService {
 
   public ChatEntity newChat(UUID userId) {
     return chatRepository.save(new ChatEntity(userId));
+  }
+
+  public List<ChatSummary> getChats(UUID userId) {
+    return chatRepository.findByUserIdOrderByUpdatedAtDesc(userId, Pageable.unpaged())
+        .stream()
+        .map(c -> new ChatSummary(c.getId(), c.getTitle(), c.getCreatedAt(), c.getUpdatedAt()))
+        .toList();
   }
 
   public ChatEntity getChat(UUID chatId, UUID userId) {

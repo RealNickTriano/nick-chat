@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,11 @@ public class ChatController {
   public ChatController(ChatService chatService, MessageRepository messageRepository) {
     this.chatService = chatService;
     this.messageRepository = messageRepository;
+  }
+
+  @GetMapping("/chats")
+  public GetChatsResponse getChats(@CurrentUserId UUID userId) {
+    return new GetChatsResponse(chatService.getChats(userId));
   }
 
   @PostMapping(value = "/chats", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
