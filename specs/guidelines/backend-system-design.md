@@ -392,7 +392,7 @@ Fetches messages for a chat.
 
 Ordered by `created_at ASC`.
 
-### 5.8 `GET /models`
+### 5.8 `GET /models` ✅ COMPLETED
 
 Lists available models for each provider by querying LangChain4j's `ModelCatalog` at request time. No local model list is maintained.
 
