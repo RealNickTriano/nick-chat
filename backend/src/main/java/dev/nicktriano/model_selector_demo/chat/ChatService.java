@@ -56,6 +56,11 @@ public class ChatService {
     return chatRepository.save(new ChatEntity(userId));
   }
 
+  public ChatEntity getChat(UUID chatId, UUID userId) {
+    return chatRepository.findByIdAndUserId(chatId, userId)
+        .orElseThrow(ChatNotFoundException::new);
+  }
+
   public ResolvedRequest validate(ApplicationChatRequest request) {
     ModelProvider provider = resolveProvider(request.provider());
     requireKnownModel(provider, request.model());

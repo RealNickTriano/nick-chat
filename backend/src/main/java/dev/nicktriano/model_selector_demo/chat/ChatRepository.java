@@ -2,6 +2,7 @@ package dev.nicktriano.model_selector_demo.chat;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
@@ -14,4 +15,6 @@ public interface ChatRepository extends JpaRepository<ChatEntity, UUID> {
   List<ChatEntity> findByUserIdOrderByUpdatedAtDesc(UUID userId, Pageable pageable);
 
   List<ChatEntity> findByUserIdAndUpdatedAtBeforeOrderByUpdatedAtDesc(UUID userId, Instant before, Pageable pageable);
+
+  Optional<ChatEntity> findByIdAndUserId(UUID id, UUID userId);
 }

@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,9 +40,27 @@ public class ChatController {
     return emitter;
   }
 
+  @PostMapping(value = "/chats/{chatId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public SseEmitter chat(@CurrentUserId UUID userId, @PathVariable UUID chatId, @Valid @RequestBody ApplicationChatRequest body) {
+    ChatEntity chatEntity = chatService.getChat(chatId, userId);
+
+    ChatService.ResolvedRequest resolved = chatService.validate(body);
+    messageRepository.save(new MessageEntity(chatEntity.getId(), "user", body.content(), resolved.provider().name(), resolved.model()));
+    SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
+    chatService.stream(resolved, chatEntity, body.content(), userId, emitter);
+    return emitter;
+  }
+
   @ExceptionHandler(ChatValidationException.class)
   public ResponseEntity<Map<String, String>> handleValidation(ChatValidationException ex) {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Map.of("error", ex.getMessage()));
+  }
+
+  @ExceptionHandler(ChatNotFoundException.class)
+  public ResponseEntity<Map<String, String>> handleNotFound(ChatNotFoundException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .contentType(MediaType.APPLICATION_JSON)
             .body(Map.of("error", ex.getMessage()));
   }
