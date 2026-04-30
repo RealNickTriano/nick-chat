@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ApiKey } from "@/lib/api-keys";
 import type { ProviderId } from "@/types/model";
-import { ProviderLogo } from "@/components/chat/ProviderLogo";
 import { ProviderIconBadge } from "./ProviderIconBadge";
 import { ApiKeyDocsLink } from "./ApiKeyDocsLink";
 import { TrashIcon } from "@/components/svg/Trash";
@@ -18,21 +17,6 @@ interface ApiKeyRowProps {
 }
 
 type RowState = "idle" | "editing" | "confirming-delete";
-
-function logoClassName(provider: ProviderId): string {
-  switch (provider) {
-    case "ANTHROPIC":
-      return "h-3 w-auto text-[var(--text)]";
-    case "OPEN_AI":
-      return "h-4 w-auto text-[var(--text)]";
-    case "GOOGLE_AI_GEMINI":
-      return "text-[10px] font-bold text-[var(--text)]";
-    case "MISTRAL_AI":
-      return "text-[10px] font-bold text-[var(--text)]";
-    default:
-      return "text-[10px] font-bold text-[var(--text)]";
-  }
-}
 
 export function ApiKeyRow({ apiKey, pending, error, onSave, onDelete }: ApiKeyRowProps) {
   const [state, setState] = useState<RowState>("idle");
@@ -96,10 +80,7 @@ export function ApiKeyRow({ apiKey, pending, error, onSave, onDelete }: ApiKeyRo
   return (
     <div className="py-4">
       <div className="flex items-center gap-3">
-        <ProviderIconBadge>
-          <ProviderLogo provider={apiKey.provider} className={logoClassName(apiKey.provider)} />
-        </ProviderIconBadge>
-
+        <ProviderIconBadge provider={apiKey.provider} />
         <span className="w-[72px] shrink-0 text-[13px] font-medium text-[var(--text)]">
           {apiKey.label}
         </span>
