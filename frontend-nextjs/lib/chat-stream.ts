@@ -10,7 +10,7 @@ export async function* chatStream(
   let response: Response;
   const xsrfToken = getCsrfToken();
   try {
-    response = await fetch(`${baseURL}/chat`, {
+    response = await fetch(`${baseURL}/chats`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -76,16 +76,20 @@ export async function* readEventStream(
 }
 
 export function parseSseRecord(record: string): ChatStreamEvent | null {
-  const payload = record
-    .split("\n")
-    .filter((line) => line.startsWith("data:"))
-    .map((line) => line.slice(5).replace(/^ /, ""))
+  const lines = record.split("\n");
+  const eventName = lines
+    .find((l) => l.startsWith("event:"))
+    ?.slice(6)
+    .trim();
+  const payload = lines
+    .filter((l) => l.startsWith("data:"))
+    .map((l) => l.slice(5).replace(/^ /, ""))
     .join("\n");
-  if (!payload) return null;
+  if (!payload || !eventName) return null;
   try {
-    return JSON.parse(payload) as ChatStreamEvent;
+    return { event: eventName, ...JSON.parse(payload) } as ChatStreamEvent;
   } catch {
-    return { type: "error", message: `Malformed SSE event: ${payload}` };
+    return { event: "error", message: `Malformed SSE event: ${payload}`, code: "PARSE_ERROR" };
   }
 }
 

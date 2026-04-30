@@ -24,10 +24,12 @@ export interface Chat {
 export interface ChatStreamRequest {
   provider: ProviderId;
   model: string;
-  messages: Array<{ role: Role; content: string }>;
+  content: string;
 }
 
 export type ChatStreamEvent =
-  | { type: "delta"; text: string }
-  | { type: "done" }
-  | { type: "error"; message: string };
+  | { event: "chat_created"; chatId: string }
+  | { event: "token"; text: string }
+  | { event: "done"; messageId: string; finishReason: string }
+  | { event: "title"; title: string }
+  | { event: "error"; message: string; code: string };
