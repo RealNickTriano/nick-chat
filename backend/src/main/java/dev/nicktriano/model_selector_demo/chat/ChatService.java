@@ -1,6 +1,7 @@
 package dev.nicktriano.model_selector_demo.chat;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import java.util.logging.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.ModelProvider;
@@ -52,13 +54,20 @@ public class ChatService {
   public ResolvedRequest validate(ApplicationChatRequest request) {
     ModelProvider provider = resolveProvider(request.provider());
     requireKnownModel(provider, request.model());
-    List<ChatMessage> lcMessages = List.of(UserMessage.from(request.content()));
-    return new ResolvedRequest(provider, request.model(), lcMessages);
+    return new ResolvedRequest(provider, request.model());
   }
 
   public void stream(ResolvedRequest resolved, UUID chatId, UUID userId, SseEmitter emitter) {
     StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model(), userId);
-    ChatRequest lcRequest = ChatRequest.builder().messages(resolved.messages()).build();
+
+    List<MessageEntity> history = messageRepository.findByChatIdOrderByCreatedAtAsc(chatId);
+    List<ChatMessage> lcMessages = new ArrayList<>();
+    for (MessageEntity m : history) {
+      if ("user".equals(m.getRole())) lcMessages.add(UserMessage.from(m.getContent()));
+      else if ("assistant".equals(m.getRole())) lcMessages.add(new AiMessage(m.getContent()));
+    }
+
+    ChatRequest lcRequest = ChatRequest.builder().messages(lcMessages).build();
 
     send(emitter, "chat_created", Map.of("chatId", chatId.toString()));
 
@@ -132,7 +141,7 @@ public class ChatService {
   }
 
 
-  public record ResolvedRequest(ModelProvider provider, String model, List<ChatMessage> messages) {}
+  public record ResolvedRequest(ModelProvider provider, String model) {}
 
   private static void send(SseEmitter emitter, String name, Map<String, ?> data) {
     try {
