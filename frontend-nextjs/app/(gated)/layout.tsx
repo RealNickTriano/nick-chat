@@ -15,10 +15,8 @@ function Shell({ children }: { children: ReactNode }) {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string>("c1");
-  const { messages } = useChat();
-
-  const activeChat = MOCK_CHATS.find((c) => c.id === activeChatId);
-  const title = activeChat?.title ?? "New chat";
+  const { messages, title } = useChat();
+  const displayTitle = title ?? "New chat";
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--bg)]">
@@ -35,7 +33,7 @@ function Shell({ children }: { children: ReactNode }) {
 
       <div className="relative flex min-w-0 flex-1 flex-col">
         <TopBar
-          title={title}
+          title={displayTitle}
           leftOpen={leftOpen}
           // rightOpen={rightOpen}
           onToggleLeft={() => setLeftOpen((o) => !o)}
