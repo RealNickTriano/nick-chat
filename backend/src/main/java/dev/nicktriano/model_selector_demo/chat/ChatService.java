@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,17 +36,20 @@ public class ChatService {
 
   private final ModelSelectorService catalogs;
   private final ApiKeyService apiKeyService;
+  private final TitleGenerationService titleGenerationService;
 
   public ChatService(
     ChatRepository chatRepository,
     MessageRepository messageRepository,
     ModelSelectorService catalogs,
-    ApiKeyService apiKeyService
+    ApiKeyService apiKeyService,
+    TitleGenerationService titleGenerationService
   ) {
     this.chatRepository = chatRepository;
     this.messageRepository = messageRepository;
     this.catalogs = catalogs;
     this.apiKeyService = apiKeyService;
+    this.titleGenerationService = titleGenerationService;
   }
 
   public ChatEntity newChat(UUID userId) {
@@ -57,7 +62,8 @@ public class ChatService {
     return new ResolvedRequest(provider, request.model());
   }
 
-  public void stream(ResolvedRequest resolved, UUID chatId, UUID userId, SseEmitter emitter) {
+  public void stream(ResolvedRequest resolved, ChatEntity chat, String content, UUID userId, SseEmitter emitter) {
+    UUID chatId = chat.getId();
     StreamingChatModel model = buildStreamingModel(resolved.provider(), resolved.model(), userId);
 
     List<MessageEntity> history = messageRepository.findByChatIdOrderByCreatedAtAsc(chatId);
@@ -70,6 +76,9 @@ public class ChatService {
     ChatRequest lcRequest = ChatRequest.builder().messages(lcMessages).build();
 
     send(emitter, "chat_created", Map.of("chatId", chatId.toString()));
+
+    boolean needsTitle = chat.getTitle() == null;
+    CompletableFuture<String> titleFuture = needsTitle ? startTitleGeneration(content) : null;
 
     model.chat(lcRequest, new StreamingChatResponseHandler() {
       @Override
@@ -87,6 +96,19 @@ public class ChatService {
           resolved.model()
         ));
         send(emitter, "done", Map.of("messageId", saved.getId().toString(), "finishReason", "stop"));
+
+        if (needsTitle) {
+          try {
+            String title = titleFuture.get(10, TimeUnit.SECONDS);
+            chat.setTitle(title);
+            chatRepository.save(chat);
+            send(emitter, "title", Map.of("title", title));
+          } catch (Exception e) {
+            logger.log(Level.WARNING, "Title generation failed", e);
+            titleFuture.cancel(true);
+          }
+        }
+
         emitter.complete();
       }
 
@@ -128,6 +150,18 @@ public class ChatService {
     if (!found) {
       throw new ChatValidationException("Unknown model for " + provider + ": " + model);
     }
+  }
+
+  private CompletableFuture<String> startTitleGeneration(String content) {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    Thread.ofVirtual().start(() -> {
+      try {
+        future.complete(titleGenerationService.generateTitle(content));
+      } catch (Exception e) {
+        future.completeExceptionally(e);
+      }
+    });
+    return future;
   }
 
   private StreamingChatModel buildStreamingModel(ModelProvider provider, String model, UUID userId) {

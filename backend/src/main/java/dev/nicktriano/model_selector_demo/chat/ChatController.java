@@ -35,7 +35,7 @@ public class ChatController {
     ChatService.ResolvedRequest resolved = chatService.validate(body);
     messageRepository.save(new MessageEntity(chatEntity.getId(), "user", body.content(), resolved.provider().name(), resolved.model()));
     SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
-    chatService.stream(resolved, chatEntity.getId(), userId, emitter);
+    chatService.stream(resolved, chatEntity, body.content(), userId, emitter);
     return emitter;
   }
 
