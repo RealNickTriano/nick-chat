@@ -77,8 +77,9 @@ public class ChatService {
 
     send(emitter, "chat_created", Map.of("chatId", chatId.toString()));
 
-    boolean needsTitle = chat.getTitle() == null;
-    CompletableFuture<String> titleFuture = needsTitle ? startTitleGeneration(content) : null;
+    CompletableFuture<Void> titleFuture = chat.getTitle() == null
+        ? startTitleGeneration(content, chat, emitter)
+        : CompletableFuture.completedFuture(null);
 
     model.chat(lcRequest, new StreamingChatResponseHandler() {
       @Override
@@ -97,16 +98,10 @@ public class ChatService {
         ));
         send(emitter, "done", Map.of("messageId", saved.getId().toString(), "finishReason", "stop"));
 
-        if (needsTitle) {
-          try {
-            String title = titleFuture.get(10, TimeUnit.SECONDS);
-            chat.setTitle(title);
-            chatRepository.save(chat);
-            send(emitter, "title", Map.of("title", title));
-          } catch (Exception e) {
-            logger.log(Level.WARNING, "Title generation failed", e);
-            titleFuture.cancel(true);
-          }
+        try {
+          titleFuture.get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+          logger.log(Level.WARNING, "Title generation timed out", e);
         }
 
         emitter.complete();
@@ -152,13 +147,18 @@ public class ChatService {
     }
   }
 
-  private CompletableFuture<String> startTitleGeneration(String content) {
-    CompletableFuture<String> future = new CompletableFuture<>();
+  private CompletableFuture<Void> startTitleGeneration(String content, ChatEntity chat, SseEmitter emitter) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
     Thread.ofVirtual().start(() -> {
       try {
-        future.complete(titleGenerationService.generateTitle(content));
+        String title = titleGenerationService.generateTitle(content);
+        chat.setTitle(title);
+        chatRepository.save(chat);
+        send(emitter, "title", Map.of("title", title));
       } catch (Exception e) {
-        future.completeExceptionally(e);
+        logger.log(Level.WARNING, "Title generation failed", e);
+      } finally {
+        future.complete(null);
       }
     });
     return future;
@@ -182,6 +182,8 @@ public class ChatService {
       emitter.send(SseEmitter.event().name(name).data(data));
     } catch (IOException e) {
       emitter.completeWithError(e);
+    } catch (IllegalStateException ignored) {
+      // emitter already closed (e.g. error path fired before title thread finished)
     }
   }
 }
