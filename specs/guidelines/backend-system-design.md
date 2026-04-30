@@ -330,7 +330,7 @@ Same as `POST /chats` except:
 - Title generation is skipped if the chat already has a title (the `stream()` method no-ops when `chat.getTitle() != null`).
 - The `chat_created` event is still emitted for protocol consistency.
 
-### 5.6 `GET /chats`
+### 5.6 `GET /chats` ✅ COMPLETED
 
 Lists the authenticated user's chats (for sidebar).
 
@@ -355,7 +355,7 @@ Lists the authenticated user's chats (for sidebar).
 
 Ordered by `updated_at DESC`. `nextCursor` is the `updated_at` of the last returned chat, or `null` if fewer than `limit` rows were returned.
 
-### 5.7 `GET /chats/{chatId}/messages`
+### 5.7 `GET /chats/{chatId}/messages` ✅ COMPLETED
 
 Fetches messages for a chat.
 
