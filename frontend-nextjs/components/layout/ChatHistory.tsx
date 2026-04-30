@@ -32,7 +32,7 @@ export function ChatHistory({ chats, activeChatId, onSelectChat }: ChatHistoryPr
   const recent = [...chats]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, MAX_CHATS)
-    .filter((c) => c.title.toLowerCase().includes(search.toLowerCase()));
+    .filter((c) => (c.title ?? "").toLowerCase().includes(search.toLowerCase()));
 
   const groups: Record<Group, Chat[]> = {
     Today: [],

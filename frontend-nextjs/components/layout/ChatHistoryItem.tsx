@@ -17,7 +17,7 @@ export function ChatHistoryItem({ chat, active, onClick }: ChatHistoryItemProps)
         active ? "bg-[var(--accent-light)] text-[var(--accent)] font-medium" : "text-[var(--text)]"
       }`}
     >
-      {chat.title}
+      {chat.title ?? "New chat"}
     </button>
   );
 }
