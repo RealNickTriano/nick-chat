@@ -34,11 +34,11 @@ export function RightSidebar({ open, onToggle, messages }: RightSidebarProps) {
   const turns = agentMsgs.length;
 
   const usedProviders = Array.from(
-    new Set(agentMsgs.map((m) => m.providerId).filter((p): p is string => Boolean(p))),
+    new Set(agentMsgs.map((m) => m.provider).filter((p): p is string => Boolean(p))),
   );
 
   const breakdown = usedProviders.map((pid) => {
-    const msgs = agentMsgs.filter((m) => m.providerId === pid);
+    const msgs = agentMsgs.filter((m) => m.provider === pid);
     const tok = msgs.reduce((s, m) => s + (m.tokens ?? 0), 0);
     const cost = msgs.reduce((s, m) => s + (m.cost ?? 0), 0);
     return {

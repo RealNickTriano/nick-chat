@@ -21,9 +21,11 @@ export function Message({ message }: MessageProps) {
     );
   }
 
-  const providerId = (message.providerId ?? "") as ProviderId;
+  const providerId = (message.provider ?? "") as ProviderId;
   const color = providerColor(providerId);
-  const label = providerId ? providerLabel(providerId) : "Assistant";
+  const modelName = message.model ?? "";
+  const label =
+    (providerId ? providerLabel(providerId) : "Assistant") + (modelName ? ` - ${modelName}` : "");
 
   return (
     <div className="flex w-full items-start gap-2.5">

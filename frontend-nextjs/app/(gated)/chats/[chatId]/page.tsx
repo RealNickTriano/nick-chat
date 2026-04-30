@@ -10,7 +10,7 @@ export default function ChatPage() {
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
-      <Conversation messages={messages} />
+      <Conversation messages={messages} loading={status === "loading"} />
 
       <div className="border-t border-[var(--border)] bg-[var(--bg)] px-6 py-4">
         {status === "error" && (
@@ -20,7 +20,7 @@ export default function ChatPage() {
         )}
         <Composer
           onSubmit={({ text, model, provider }) => send(text, model, provider)}
-          disabled={status === "streaming"}
+          disabled={status === "streaming" || status === "loading"}
         />
       </div>
     </main>

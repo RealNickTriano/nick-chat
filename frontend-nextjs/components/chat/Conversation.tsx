@@ -9,9 +9,10 @@ import { TypingIndicator } from "./TypingIndicator";
 interface ConversationProps {
   messages: ChatMessage[];
   typingProviderId?: ProviderId;
+  loading?: boolean;
 }
 
-export function Conversation({ messages, typingProviderId }: ConversationProps) {
+export function Conversation({ messages, typingProviderId, loading }: ConversationProps) {
   const listRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -27,15 +28,34 @@ export function Conversation({ messages, typingProviderId }: ConversationProps) 
       aria-atomic="false"
       className="chat-scroll flex max-h-full min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-8 py-6"
     >
-      {messages.map((m) => (
-        <li key={m.id}>
-          <Message message={m} />
+      {loading ? (
+        <li className="flex justify-center pt-8">
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-[var(--text3)]"
+                style={{
+                  animation: "typing-bounce 1.2s infinite",
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              />
+            ))}
+          </div>
         </li>
-      ))}
-      {typingProviderId && (
-        <li>
-          <TypingIndicator providerId={typingProviderId} />
-        </li>
+      ) : (
+        <>
+          {messages.map((m) => (
+            <li key={m.id}>
+              <Message message={m} />
+            </li>
+          ))}
+          {typingProviderId && (
+            <li>
+              <TypingIndicator providerId={typingProviderId} />
+            </li>
+          )}
+        </>
       )}
     </ol>
   );

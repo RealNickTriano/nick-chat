@@ -9,7 +9,9 @@ export interface Message {
   content: string;
   status: MessageStatus;
   error?: string;
-  providerId?: string;
+  provider?: string;
+  model?: string;
+  createdAt?: Date;
   tokens?: number;
   cost?: number;
 }
