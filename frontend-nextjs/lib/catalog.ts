@@ -52,8 +52,8 @@ async function load(): Promise<Model[]> {
   inflight = http
     .get<BackendModelsResponse>("/models")
     .then((res) => {
-      cached = res.data.providers.flatMap((pg) =>
-        pg.models.map((m) => ({
+      cached = res.data.providers.flatMap((pg) => {
+        const mapped: Model[] = pg.models.map((m) => ({
           id: m.id,
           displayName: m.displayName,
           description: m.description,
@@ -63,8 +63,15 @@ async function load(): Promise<Model[]> {
           maxOutputTokens: m.maxOutputTokens,
           createdAt: m.createdAt,
           owner: m.owner,
-        })),
-      );
+        }));
+        // Sort newest first within each provider; missing createdAt sinks to the end.
+        mapped.sort((a, b) => {
+          const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+          const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+          return tb - ta;
+        });
+        return mapped;
+      });
       lastError = null;
       notify({ status: "ready", models: cached, error: null });
       return cached;
