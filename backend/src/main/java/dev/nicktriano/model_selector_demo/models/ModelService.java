@@ -3,8 +3,11 @@ package dev.nicktriano.model_selector_demo.models;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -81,6 +84,7 @@ public class ModelService {
           continue;
         List<ModelEntry> models = catalog.get().listModels().stream()
             .map(m -> toEntry(m, provider))
+            .filter(distinctById())
             .toList();
         result.add(new ProviderModels(provider.name(), models));
       } catch (Exception e) {
@@ -106,6 +110,11 @@ public class ModelService {
           .build());
       default -> Optional.empty();
     };
+  }
+
+  private static Predicate<ModelEntry> distinctById() {
+    Set<String> seen = new HashSet<>();
+    return entry -> seen.add(entry.id());
   }
 
   private ModelEntry toEntry(ModelDescription m, ModelProvider provider) {
