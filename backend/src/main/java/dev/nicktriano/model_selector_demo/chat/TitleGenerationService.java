@@ -26,7 +26,11 @@ public class TitleGenerationService {
   }
 
   public String generateTitle(String firstUserMessage) {
-    String systemPrompt = "Generate a short (max 6 words) title summarizing this conversation. Reply with only the title, no quotes.";
+    String systemPrompt = """
+      Generate a short (max 6 words) title summarizing this conversation. Reply with only the title, no quotes.
+      
+      Do not reference specific LLM models unless the conversation is talking about them.
+    """;
     ChatRequest request = ChatRequest.builder()
         .messages(SystemMessage.from(systemPrompt), UserMessage.from(firstUserMessage))
         .build();
