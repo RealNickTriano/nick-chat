@@ -6,6 +6,11 @@ import { providerLabel } from "@/lib/models";
 import { useModelCatalog } from "@/lib/catalog";
 import { MarkdownContent } from "./MarkdownContent";
 import { ProviderIconBadge } from "../api-keys/ProviderIconBadge";
+import { OutputTokensMessageLabel } from "./OutputTokensMessageLabel";
+import { LatencyMessageLabel } from "./LatencyMessageLabel";
+import { TtftMessageLabel } from "./TtftMessageLabel";
+import { FinishReasonMessageLabel } from "./FinishReasonMessageLabel";
+import { ResolvedModelMessageLabel } from "./ResolvedModelMessageLabel";
 
 interface MessageProps {
   message: ChatMessage;
@@ -50,12 +55,16 @@ export function Message({ message }: MessageProps) {
             <div className="mt-1 text-xs text-red-600 dark:text-red-400">{message.error}</div>
           )}
         </div>
-        {(message.tokens !== undefined || message.cost !== undefined) && (
-          <div className="mt-[5px] flex gap-3 font-mono text-[11px] text-[var(--text3)]">
-            {message.tokens !== undefined && <span>{message.tokens} tok</span>}
-            {message.cost !== undefined && <span>${message.cost.toFixed(4)}</span>}
-          </div>
-        )}
+        <div className="mt-[5px] flex gap-3 font-mono text-xs text-[var(--text3)]">
+          <OutputTokensMessageLabel outputTokens={message.outputTokens} />
+          <LatencyMessageLabel latencyMs={message.latencyMs} />
+          <TtftMessageLabel ttftMs={message.ttftMs} />
+          <FinishReasonMessageLabel finishReason={message.finishReason} />
+          <ResolvedModelMessageLabel
+            resolvedModel={message.resolvedModel}
+            requestedModel={message.model}
+          />
+        </div>
       </div>
     </div>
   );

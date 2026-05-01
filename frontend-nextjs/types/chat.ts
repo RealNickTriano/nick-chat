@@ -12,8 +12,13 @@ export interface Message {
   provider?: string;
   model?: string;
   createdAt?: Date;
-  tokens?: number;
-  cost?: number;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  totalTokens?: number | null;
+  latencyMs?: number | null;
+  ttftMs?: number | null;
+  finishReason?: string | null;
+  resolvedModel?: string | null;
 }
 
 export interface Chat {

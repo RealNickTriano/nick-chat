@@ -8,6 +8,13 @@ interface BackendMessage {
   model: string;
   content: string;
   createdAt: string;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  totalTokens?: number | null;
+  latencyMs?: number | null;
+  ttftMs?: number | null;
+  finishReason?: string | null;
+  resolvedModel?: string | null;
 }
 
 function toMessage(m: BackendMessage): Message {
@@ -19,6 +26,13 @@ function toMessage(m: BackendMessage): Message {
     provider: m.provider,
     model: m.model,
     createdAt: new Date(m.createdAt),
+    inputTokens: m.inputTokens,
+    outputTokens: m.outputTokens,
+    totalTokens: m.totalTokens,
+    latencyMs: m.latencyMs,
+    ttftMs: m.ttftMs,
+    finishReason: m.finishReason,
+    resolvedModel: m.resolvedModel,
   };
 }
 
