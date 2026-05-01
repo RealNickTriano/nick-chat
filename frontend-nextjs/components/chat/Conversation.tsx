@@ -17,6 +17,9 @@ const BOTTOM_THRESHOLD = 80;
 
 export function Conversation({ messages, typingProviderId, loading }: ConversationProps) {
   const listRef = useRef<HTMLOListElement>(null);
+  const initialLoad = useRef(true);
+  const prevMessageCount = useRef(messages.length);
+  const autoScroll = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   const isNearBottom = useCallback(() => {
@@ -28,20 +31,41 @@ export function Conversation({ messages, typingProviderId, loading }: Conversati
   const scrollToBottom = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
+    autoScroll.current = true;
+    setShowScrollButton(false);
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, []);
 
   const handleScroll = useCallback(() => {
-    setShowScrollButton(!isNearBottom());
+    const atBottom = isNearBottom();
+    autoScroll.current = atBottom;
+    setShowScrollButton(!atBottom);
   }, [isNearBottom]);
 
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    if (isNearBottom()) {
+
+    const messageCountIncreased = messages.length > prevMessageCount.current;
+    prevMessageCount.current = messages.length;
+
+    if (initialLoad.current && messages.length > 0) {
+      el.scrollTop = el.scrollHeight;
+      initialLoad.current = false;
+      return;
+    }
+
+    if (messageCountIncreased) {
+      autoScroll.current = true;
+      setShowScrollButton(false);
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+
+    if (autoScroll.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages, typingProviderId, isNearBottom]);
+  }, [messages, typingProviderId]);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
