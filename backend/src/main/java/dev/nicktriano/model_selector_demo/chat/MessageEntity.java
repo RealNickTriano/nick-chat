@@ -42,6 +42,15 @@ public class MessageEntity {
 
   private String model;
 
+  private Integer inputTokens;
+  private Integer outputTokens;
+  private Integer totalTokens;
+  private String finishReason;
+  private String responseId;
+  private Integer latencyMs;
+  private Integer ttftMs;
+  private String resolvedModel;
+
   @CreatedDate
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
@@ -52,5 +61,24 @@ public class MessageEntity {
     this.content = content;
     this.provider = provider;
     this.model = model;
+  }
+
+  public MessageEntity(UUID chatId, String role, String content, String provider, String model,
+                       Integer inputTokens, Integer outputTokens, Integer totalTokens,
+                       String finishReason, String responseId,
+                       Integer latencyMs, Integer ttftMs, String resolvedModel) {
+    this.chatId = chatId;
+    this.role = role;
+    this.content = content;
+    this.provider = provider;
+    this.model = model;
+    this.inputTokens = inputTokens;
+    this.outputTokens = outputTokens;
+    this.totalTokens = totalTokens;
+    this.finishReason = finishReason;
+    this.responseId = responseId;
+    this.latencyMs = latencyMs;
+    this.ttftMs = ttftMs;
+    this.resolvedModel = resolvedModel;
   }
 }

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,6 +24,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.model.output.TokenUsage;
 import dev.nicktriano.model_selector_demo.apikey.ApiKeyService;
 import dev.nicktriano.model_selector_demo.model.StreamingChatModelBuilder;
 
@@ -69,7 +71,10 @@ public class ChatService {
     getChat(chatId, userId);
     return messageRepository.findByChatIdOrderByCreatedAtAsc(chatId)
         .stream()
-        .map(m -> new MessageSummary(m.getId(), m.getRole(), m.getProvider(), m.getModel(), m.getContent(), m.getCreatedAt()))
+        .map(m -> new MessageSummary(m.getId(), m.getRole(), m.getProvider(), m.getModel(), m.getContent(), m.getCreatedAt(),
+            m.getInputTokens(), m.getOutputTokens(), m.getTotalTokens(),
+            m.getFinishReason(), m.getResponseId(),
+            m.getLatencyMs(), m.getTtftMs(), m.getResolvedModel()))
         .toList();
   }
 
@@ -97,22 +102,38 @@ public class ChatService {
         ? startTitleGeneration(content, chat, emitter)
         : CompletableFuture.completedFuture(null);
 
+    long startMs = System.currentTimeMillis();
+    AtomicLong firstTokenMs = new AtomicLong(-1);
+
     model.chat(lcRequest, new StreamingChatResponseHandler() {
       @Override
       public void onPartialResponse(String partial) {
+        firstTokenMs.compareAndSet(-1, System.currentTimeMillis());
         send(emitter, "token", Map.of("text", partial));
       }
 
       @Override
       public void onCompleteResponse(ChatResponse response) {
+        long endMs = System.currentTimeMillis();
+        TokenUsage usage = response.tokenUsage();
+        long ttft = firstTokenMs.get();
         MessageEntity saved = messageRepository.save(new MessageEntity(
           chatId,
           "assistant",
           response.aiMessage().text(),
           resolved.provider().name(),
-          resolved.model()
+          resolved.model(),
+          usage != null ? usage.inputTokenCount()  : null,
+          usage != null ? usage.outputTokenCount() : null,
+          usage != null ? usage.totalTokenCount()  : null,
+          response.finishReason() != null ? response.finishReason().name() : null,
+          response.id(),
+          (int) (endMs - startMs),
+          ttft >= 0 ? (int) (ttft - startMs) : null,
+          response.modelName()
         ));
-        send(emitter, "done", Map.of("messageId", saved.getId().toString(), "finishReason", "stop"));
+        String finishReason = saved.getFinishReason() != null ? saved.getFinishReason() : "UNKNOWN";
+        send(emitter, "done", Map.of("messageId", saved.getId().toString(), "finishReason", finishReason));
 
         try {
           titleFuture.get(10, TimeUnit.SECONDS);
@@ -179,7 +200,11 @@ public class ChatService {
 
   public record ResolvedRequest(ModelProvider provider, String model) {}
 
-  public record MessageSummary(UUID id, String role, String provider, String model, String content, Instant createdAt) {}
+  public record MessageSummary(
+      UUID id, String role, String provider, String model, String content, Instant createdAt,
+      Integer inputTokens, Integer outputTokens, Integer totalTokens,
+      String finishReason, String responseId,
+      Integer latencyMs, Integer ttftMs, String resolvedModel) {}
 
   private static void send(SseEmitter emitter, String name, Map<String, ?> data) {
     try {
