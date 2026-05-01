@@ -80,7 +80,7 @@ public class ModelService {
         if (catalog.isEmpty())
           continue;
         List<ModelEntry> models = catalog.get().listModels().stream()
-            .map(this::toEntry)
+            .map(m -> toEntry(m, provider))
             .toList();
         result.add(new ProviderModels(provider.name(), models));
       } catch (Exception e) {
@@ -108,7 +108,7 @@ public class ModelService {
     };
   }
 
-  private ModelEntry toEntry(ModelDescription m) {
+  private ModelEntry toEntry(ModelDescription m, ModelProvider provider) {
     return new ModelEntry(
         m.name(),
         m.displayName(),
@@ -117,7 +117,7 @@ public class ModelService {
         m.type(),
         m.maxInputTokens(),
         m.maxOutputTokens(),
-        m.createdAt(),
+        provider == ModelProvider.MISTRAL_AI ? null : m.createdAt(),
         m.owner()
     );
   }
