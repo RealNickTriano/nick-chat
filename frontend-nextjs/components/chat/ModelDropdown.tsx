@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import type { ReactNode, RefObject } from "react";
-import { providerColor } from "@/components/chat/AgentAvatar";
 import { useModelCatalog } from "@/lib/catalog";
 import { useFavorites } from "@/lib/favorites";
 import { useRecentModels } from "@/lib/recent-models";
+import { ProviderIconBadge } from "@/components/api-keys/ProviderIconBadge";
 import type { Model } from "@/types/model";
 
 interface ModelDropdownProps {
@@ -138,11 +138,7 @@ function Row({
         selected ? "bg-[var(--bg2)]" : ""
       }`}
     >
-      <span
-        aria-hidden="true"
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{ background: providerColor(model.provider) }}
-      />
+      <ProviderIconBadge provider={model.provider} />
       <span className="truncate text-[var(--text)]">{model.displayName}</span>
     </button>
   );
