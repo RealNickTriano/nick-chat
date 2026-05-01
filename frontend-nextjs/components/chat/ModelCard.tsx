@@ -58,6 +58,16 @@ export function ModelCard({
             {model.description}
           </p>
         )}
+        {model.createdAt && (
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+            Released{" "}
+            {new Date(model.createdAt).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </p>
+        )}
       </div>
 
       <FavoriteButton
