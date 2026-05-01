@@ -3,8 +3,8 @@ import type { ProviderId } from "@/types/model";
 const PROVIDER_LABELS: Record<string, string> = {
   OPEN_AI: "OpenAI",
   ANTHROPIC: "Anthropic",
-  GOOGLE_AI_GEMINI: "Google",
-  MISTRAL_AI: "Mistral",
+  GOOGLE_AI_GEMINI: "Google Gemini",
+  MISTRAL_AI: "Mistral AI",
 };
 
 const API_KEY_URLS: Record<string, string> = {

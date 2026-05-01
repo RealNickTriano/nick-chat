@@ -42,6 +42,7 @@ Do not create `utils.ts` dumping grounds. If a helper has no clear home, it prob
 
 - **Tailwind v4 utilities** are the default styling mechanism. Use `@theme` in `globals.css` to define design tokens; don't hardcode colors or spacing in components.
 - **No CSS-in-JS libraries.** Tailwind covers the need and avoids runtime cost.
+- **Prefer scale utilities over arbitrary values.** Use `text-sm`, `p-4`, `gap-2`, `w-8` instead of `text-[12px]`, `p-[16px]`, `gap-[8px]`, `w-[32px]`. Reach for arbitrary values only when no scale step fits.
 - **Design tokens, not raw values.** Reference semantic tokens (`bg-surface`, `text-muted`) rather than palette values (`bg-zinc-900`). This keeps dark/light theming trivial.
 - **Theming via `data-theme` or `class` on `<html>`.** Respect `prefers-color-scheme` by default; allow manual override persisted to local storage. Avoid flashes of unstyled theme by setting the initial class in a blocking inline script in `layout.tsx`.
 

@@ -1,2 +1,3 @@
 docker compose up -d
 docker exec -it nick-chat-db-1 psql -U user -d nickchat
+export $(grep -v '^#' .env | xargs)

@@ -19,7 +19,7 @@ export function ProviderIconBadge({ provider }: ProviderIconBadgeProps) {
           case "ANTHROPIC":
             return <AnthropicIconLogo />;
           case "GOOGLE_AI_GEMINI":
-            return <GoogleIconLogo className="p-1" />;
+            return <GoogleIconLogo className="size-6" />;
           case "MISTRAL_AI":
             return <MistralIconLogo className="p-0.5" />;
           default:

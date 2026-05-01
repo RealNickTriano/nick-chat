@@ -1,5 +1,5 @@
 import Image from "next/image";
-import logo from "@/assets/google/google-icon-logo.svg";
+import logo from "@/assets/google/google-gemini-icon-logo.svg";
 
 interface GoogleIconLogoProps {
   className?: string;

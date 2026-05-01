@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { ApiKey } from "@/lib/api-keys";
-import type { ProviderId } from "@/types/model";
 import { ProviderIconBadge } from "./ProviderIconBadge";
 import { ApiKeyDocsLink } from "./ApiKeyDocsLink";
 import { TrashIcon } from "@/components/svg/Trash";
@@ -81,15 +80,13 @@ export function ApiKeyRow({ apiKey, pending, error, onSave, onDelete }: ApiKeyRo
     <div className="py-4">
       <div className="flex items-center gap-3">
         <ProviderIconBadge provider={apiKey.provider} />
-        <span className="w-[72px] shrink-0 text-[13px] font-medium text-[var(--text)]">
-          {apiKey.label}
-        </span>
+        <span className="shrink-0 text-[13px] font-medium text-[var(--text)]">{apiKey.label}</span>
 
         <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
           <div className="flex w-full items-center justify-end gap-2">
             {state === "idle" && !apiKey.keyMask && (
               <>
-                <span className="text-[12px] text-[var(--text3)]">No key saved</span>
+                <span className="text-xs text-[var(--text3)]">No key saved</span>
                 <ApiKeyDocsLink docsUrl={apiKey.docsUrl} />
                 <button
                   type="button"

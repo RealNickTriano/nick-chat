@@ -8,7 +8,7 @@ export const ApiKeyDocsLink = ({ docsUrl }: Props) => {
       href={docsUrl}
       target="_blank"
       rel="noreferrer"
-      className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+      className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center gap-1"
     >
       Get key
       <svg
