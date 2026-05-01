@@ -39,11 +39,10 @@ export function ApiKeysModal({ open, onClose }: ApiKeysModalProps) {
     if (open) closeButtonRef.current?.focus();
   }, [open]);
 
-  if (!open) return null;
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      aria-hidden={!open}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200 ease-out ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
       onClick={onClose}
     >
       <div
@@ -51,7 +50,7 @@ export function ApiKeysModal({ open, onClose }: ApiKeysModalProps) {
         aria-modal="true"
         aria-labelledby={TITLE_ID}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-[520px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)] shadow-lg"
+        className={`flex max-h-[85vh] w-[520px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)] shadow-lg transition-[opacity,transform] duration-200 ease-out ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
       >
         {/* Header */}
         <div className="flex shrink-0 items-start justify-between px-5 py-4">
