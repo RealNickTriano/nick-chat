@@ -1,14 +1,19 @@
+"use client";
+
 import type { Message as ChatMessage } from "@/types/chat";
 import type { ProviderId } from "@/types/model";
 import { providerLabel } from "@/lib/models";
-import { AgentAvatar, providerColor } from "./AgentAvatar";
+import { useModelCatalog } from "@/lib/catalog";
 import { MarkdownContent } from "./MarkdownContent";
+import { ProviderIconBadge } from "../api-keys/ProviderIconBadge";
 
 interface MessageProps {
   message: ChatMessage;
 }
 
 export function Message({ message }: MessageProps) {
+  const { models } = useModelCatalog();
+
   if (message.role === "user") {
     return (
       <div className="flex w-full justify-end">
@@ -23,19 +28,18 @@ export function Message({ message }: MessageProps) {
   }
 
   const providerId = (message.provider ?? "") as ProviderId;
-  const color = providerColor(providerId);
-  const modelName = message.model ?? "";
+  const modelId = message.model ?? "";
+  const modelDisplayName = models.find((m) => m.id === modelId)?.displayName ?? modelId;
   const label =
-    (providerId ? providerLabel(providerId) : "Assistant") + (modelName ? ` - ${modelName}` : "");
+    (providerId ? providerLabel(providerId) : "Assistant") +
+    (modelDisplayName ? ` - ${modelDisplayName}` : "");
 
   return (
     <div className="flex w-full items-start gap-2.5">
-      <AgentAvatar providerId={providerId} />
+      <ProviderIconBadge provider={providerId} />
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-1.5">
-          <span className="font-mono text-xs font-semibold" style={{ color }}>
-            {label}
-          </span>
+          <span className="font-mono text-xs font-semibold text-[var(--text2)]">{label}</span>
         </div>
         <div
           className="bg-[var(--bg2)] px-[15px] py-2.5 text-sm leading-[1.65] text-[var(--text)]"
