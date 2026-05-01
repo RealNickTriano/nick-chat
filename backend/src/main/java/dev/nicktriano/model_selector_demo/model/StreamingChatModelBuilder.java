@@ -3,6 +3,8 @@ package dev.nicktriano.model_selector_demo.model;
 import dev.langchain4j.model.ModelProvider;
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
+import dev.langchain4j.model.mistralai.MistralAiStreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.nicktriano.model_selector_demo.chat.ChatValidationException;
 
@@ -39,6 +41,14 @@ public class StreamingChatModelBuilder {
         .modelName(this.modelName)
         .build();
       case ANTHROPIC -> AnthropicStreamingChatModel.builder()
+        .apiKey(this.apiKey)
+        .modelName(this.modelName)
+        .build();
+      case GOOGLE_AI_GEMINI -> GoogleAiGeminiStreamingChatModel.builder()
+        .apiKey(this.apiKey)
+        .modelName(this.modelName)
+        .build();
+      case MISTRAL_AI -> MistralAiStreamingChatModel.builder()
         .apiKey(this.apiKey)
         .modelName(this.modelName)
         .build();

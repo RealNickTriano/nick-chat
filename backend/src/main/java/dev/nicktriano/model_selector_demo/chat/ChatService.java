@@ -139,7 +139,8 @@ public class ChatService {
     }
     try {
       ModelProvider resolved = ModelProvider.valueOf(provider);
-      if (resolved == ModelProvider.OPEN_AI || resolved == ModelProvider.ANTHROPIC) {
+      if (resolved == ModelProvider.OPEN_AI || resolved == ModelProvider.ANTHROPIC ||
+          resolved == ModelProvider.GOOGLE_AI_GEMINI || resolved == ModelProvider.MISTRAL_AI) {
         return resolved;
       }
     } catch (IllegalArgumentException ignored) {

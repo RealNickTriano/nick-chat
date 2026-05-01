@@ -14,6 +14,8 @@ import dev.langchain4j.model.ModelProvider;
 import dev.langchain4j.model.anthropic.AnthropicModelCatalog;
 import dev.langchain4j.model.catalog.ModelCatalog;
 import dev.langchain4j.model.catalog.ModelDescription;
+import dev.langchain4j.model.googleai.GoogleAiGeminiModelCatalog;
+import dev.langchain4j.model.mistralai.MistralAiModelCatalog;
 import dev.langchain4j.model.openai.OpenAiModelCatalog;
 import dev.nicktriano.model_selector_demo.models.ModelsResponse.ModelEntry;
 import dev.nicktriano.model_selector_demo.models.ModelsResponse.ProviderModels;
@@ -25,10 +27,14 @@ public class ModelService {
 
   private static final List<ModelProvider> CATALOG_PROVIDERS = List.of(
       ModelProvider.OPEN_AI,
-      ModelProvider.ANTHROPIC);
+      ModelProvider.ANTHROPIC,
+      ModelProvider.GOOGLE_AI_GEMINI,
+      ModelProvider.MISTRAL_AI);
 
   private final String openAiKey;
   private final String anthropicKey;
+  private final String googleKey;
+  private final String mistralKey;
   private final int cacheTtlMinutes;
 
   private volatile List<ProviderModels> cache = List.of();
@@ -37,9 +43,13 @@ public class ModelService {
   public ModelService(
       @Value("${app.openai.key}") String openAiKey,
       @Value("${app.anthropic.key}") String anthropicKey,
+      @Value("${app.google.key}") String googleKey,
+      @Value("${app.mistral.key}") String mistralKey,
       @Value("${app.models.cache-ttl-minutes:15}") int cacheTtlMinutes) {
     this.openAiKey = openAiKey;
     this.anthropicKey = anthropicKey;
+    this.googleKey = googleKey;
+    this.mistralKey = mistralKey;
     this.cacheTtlMinutes = cacheTtlMinutes;
   }
 
@@ -87,6 +97,12 @@ public class ModelService {
           .build());
       case ANTHROPIC -> Optional.of(new AnthropicModelCatalog.Builder()
           .apiKey(anthropicKey)
+          .build());
+      case GOOGLE_AI_GEMINI -> Optional.of(new GoogleAiGeminiModelCatalog.Builder()
+          .apiKey(googleKey)
+          .build());
+      case MISTRAL_AI -> Optional.of(new MistralAiModelCatalog.Builder()
+          .apiKey(mistralKey)
           .build());
       default -> Optional.empty();
     };
