@@ -11,6 +11,7 @@ import { LatencyMessageLabel } from "./LatencyMessageLabel";
 import { TtftMessageLabel } from "./TtftMessageLabel";
 import { FinishReasonMessageLabel } from "./FinishReasonMessageLabel";
 import { ResolvedModelMessageLabel } from "./ResolvedModelMessageLabel";
+import { TotalTokensMessageLabel } from "./TotalTokensMessageLabel";
 
 interface MessageProps {
   message: ChatMessage;
@@ -57,6 +58,7 @@ export function Message({ message }: MessageProps) {
         </div>
         <div className="mt-[5px] flex gap-3 font-mono text-xs text-[var(--text3)]">
           <OutputTokensMessageLabel outputTokens={message.outputTokens} />
+          <TotalTokensMessageLabel totalTokens={message.totalTokens} />
           <LatencyMessageLabel latencyMs={message.latencyMs} />
           <TtftMessageLabel ttftMs={message.ttftMs} />
           <FinishReasonMessageLabel finishReason={message.finishReason} />
