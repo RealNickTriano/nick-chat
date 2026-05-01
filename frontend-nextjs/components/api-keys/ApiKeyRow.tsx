@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { ApiKey } from "@/lib/api-keys";
-import { ProviderIconBadge } from "./ProviderIconBadge";
+import { ProviderLabelWithIconBadge } from "./ProviderLabelWithIconBadge";
 import { ApiKeyDocsLink } from "./ApiKeyDocsLink";
 import { TrashIcon } from "@/components/svg/Trash";
 import { relativeTime } from "@/lib/relative-time";
@@ -79,8 +79,7 @@ export function ApiKeyRow({ apiKey, pending, error, onSave, onDelete }: ApiKeyRo
   return (
     <div className="py-4">
       <div className="flex items-center gap-3">
-        <ProviderIconBadge provider={apiKey.provider} />
-        <span className="shrink-0 text-[13px] font-medium text-[var(--text)]">{apiKey.label}</span>
+        <ProviderLabelWithIconBadge provider={apiKey.provider} label={apiKey.label} />
 
         <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
           <div className="flex w-full items-center justify-end gap-2">

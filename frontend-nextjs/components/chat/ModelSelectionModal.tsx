@@ -18,7 +18,6 @@ interface ModelSelectionModalProps {
 }
 
 export function ModelSelectionModal({ open, onClose, value, onPick }: ModelSelectionModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const { status, models, error, refetch } = useModelCatalog();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [explicitProvider, setExplicitProvider] = useState<ProviderId | null>(null);
@@ -44,22 +43,29 @@ export function ModelSelectionModal({ open, onClose, value, onPick }: ModelSelec
     return fromValue && providers.includes(fromValue) ? fromValue : providers[0];
   })();
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  const handleDialogClose = () => {
+  const handleClose = () => {
     setSearch("");
     setExplicitProvider(null);
     onClose();
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
-    if (e.target === dialogRef.current) onClose();
-  };
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const searchLower = search.trim().toLowerCase();
   const searchActive = searchLower.length > 0;
@@ -99,14 +105,18 @@ export function ModelSelectionModal({ open, onClose, value, onPick }: ModelSelec
   const hasModels = status === "ready" && providers.length > 0;
 
   return (
-    <dialog
-      ref={dialogRef}
-      onClose={handleDialogClose}
-      onClick={handleBackdropClick}
-      aria-label="Select a model"
-      className="m-auto h-full max-h-[80vh] w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl backdrop:bg-black/70 md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
+    <div
+      aria-hidden={!open}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity duration-200 ease-out ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+      onClick={handleClose}
     >
-      <div className="flex h-full flex-col">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Select a model"
+        onClick={(e) => e.stopPropagation()}
+        className={`m-auto flex h-full max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl transition-[opacity,transform] duration-200 ease-out md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+      >
         <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
           <h2 className="text-sm font-medium">Select a model</h2>
           <ModelSelectorCloseButton onClick={onClose} />
@@ -182,7 +192,7 @@ export function ModelSelectionModal({ open, onClose, value, onPick }: ModelSelec
           </div>
         </div>
       </div>
-    </dialog>
+    </div>
   );
 }
 

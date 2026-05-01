@@ -1,6 +1,6 @@
 "use client";
 
-import { providerColor } from "@/components/chat/AgentAvatar";
+import { ProviderLabelWithIconBadge } from "@/components/api-keys/ProviderLabelWithIconBadge";
 import { providerLabel } from "@/lib/models";
 import type { ProviderId } from "@/types/model";
 
@@ -43,14 +43,7 @@ export function ModelProviderList({
                 } ${dimmed ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: providerColor(p) }}
-                  />
-                  <span className="truncate text-neutral-900 dark:text-neutral-100">
-                    {providerLabel(p)}
-                  </span>
+                  <ProviderLabelWithIconBadge provider={p} label={providerLabel(p)} />
                 </span>
                 {count !== null && (
                   <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
