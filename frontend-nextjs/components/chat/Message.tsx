@@ -41,17 +41,32 @@ export function Message({ message }: MessageProps) {
     (modelDisplayName ? ` - ${modelDisplayName}` : "");
 
   return (
-    <div className="flex w-full items-start gap-2.5">
+    <div className="flex items-start gap-2.5">
       <ProviderIconBadge provider={providerId} />
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-1.5">
           <span className="font-mono text-xs font-semibold text-[var(--text2)]">{label}</span>
         </div>
         <div
-          className="bg-[var(--bg2)] px-[15px] py-2.5 text-sm leading-[1.65] text-[var(--text)]"
+          className="bg-[var(--bg2)] px-[15px] w-fit py-2.5 text-sm leading-[1.65] text-[var(--text)]"
           style={{ borderRadius: "4px 18px 18px 18px" }}
         >
-          <MarkdownContent content={message.content} streaming={message.status === "streaming"} />
+          {message.status === "streaming" && message.content === "" ? (
+            <div className="flex gap-1 py-1">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-1.5 w-1.5 rounded-full bg-[var(--text3)]"
+                  style={{
+                    animation: "typing-bounce 1.2s infinite",
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <MarkdownContent content={message.content} streaming={message.status === "streaming"} />
+          )}
           {message.status === "error" && message.error && (
             <div className="mt-1 text-xs text-red-600 dark:text-red-400">{message.error}</div>
           )}
