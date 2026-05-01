@@ -65,6 +65,103 @@ button {
   background-color: var(--text3);
 }
 
+/* highlight.js token theme — adapts to light/dark via CSS vars */
+:root {
+  --hljs-keyword: oklch(45% 0.18 252);
+  --hljs-string: oklch(38% 0.13 145);
+  --hljs-comment: oklch(55% 0.01 260);
+  --hljs-number: oklch(45% 0.16 38);
+  --hljs-builtin: oklch(45% 0.14 290);
+  --hljs-title: oklch(40% 0.15 220);
+  --hljs-attr: oklch(42% 0.13 160);
+  --hljs-tag: oklch(42% 0.15 15);
+}
+
+.dark {
+  --hljs-keyword: oklch(72% 0.14 252);
+  --hljs-string: oklch(72% 0.12 145);
+  --hljs-comment: oklch(52% 0.01 260);
+  --hljs-number: oklch(72% 0.14 50);
+  --hljs-builtin: oklch(72% 0.11 290);
+  --hljs-title: oklch(72% 0.12 220);
+  --hljs-attr: oklch(72% 0.11 160);
+  --hljs-tag: oklch(72% 0.13 15);
+}
+
+.hljs {
+  color: var(--text);
+  background: transparent;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-operator {
+  color: var(--hljs-keyword);
+  font-weight: 500;
+}
+
+.hljs-string,
+.hljs-template-string,
+.hljs-template-variable,
+.hljs-addition,
+.hljs-regexp {
+  color: var(--hljs-string);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--hljs-comment);
+  font-style: italic;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-boolean {
+  color: var(--hljs-number);
+}
+
+.hljs-built_in,
+.hljs-builtin-name {
+  color: var(--hljs-builtin);
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--hljs-title);
+}
+
+.hljs-attribute,
+.hljs-attr {
+  color: var(--hljs-attr);
+}
+
+.hljs-tag,
+.hljs-deletion {
+  color: var(--hljs-tag);
+}
+
+.hljs-type,
+.hljs-class .hljs-title {
+  color: var(--hljs-builtin);
+  font-weight: 500;
+}
+
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: var(--hljs-comment);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
 @keyframes typing-bounce {
   0%,
   60%,

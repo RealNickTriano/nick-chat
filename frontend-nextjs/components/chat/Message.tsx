@@ -2,6 +2,7 @@ import type { Message as ChatMessage } from "@/types/chat";
 import type { ProviderId } from "@/types/model";
 import { providerLabel } from "@/lib/models";
 import { AgentAvatar, providerColor } from "./AgentAvatar";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface MessageProps {
   message: ChatMessage;
@@ -40,15 +41,7 @@ export function Message({ message }: MessageProps) {
           className="bg-[var(--bg2)] px-[15px] py-2.5 text-sm leading-[1.65] text-[var(--text)]"
           style={{ borderRadius: "4px 18px 18px 18px" }}
         >
-          <div className="whitespace-pre-wrap break-words">
-            {message.content}
-            {message.status === "streaming" && (
-              <span
-                aria-hidden="true"
-                className="ml-0.5 inline-block h-4 w-[2px] translate-y-[3px] animate-pulse bg-current opacity-60"
-              />
-            )}
-          </div>
+          <MarkdownContent content={message.content} streaming={message.status === "streaming"} />
           {message.status === "error" && message.error && (
             <div className="mt-1 text-xs text-red-600 dark:text-red-400">{message.error}</div>
           )}
