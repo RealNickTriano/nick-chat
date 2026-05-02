@@ -39,6 +39,12 @@ A self-hosted, multi-provider LLM chat app. Users sign in with Google, store the
 **Infrastructure**
 - PostgreSQL via Docker Compose
 
+## Future Plans
+
+- **AWS Elastic Beanstalk** — deploy the backend and frontend to managed AWS infrastructure
+- **Agent Builder** — UI for composing and running multi-step LLM agents
+- **Benchmarking** — run a prompt across multiple models simultaneously and compare outputs
+
 ## Project Structure
 
 ```
@@ -120,3 +126,4 @@ The app runs at `http://localhost:3000`.
 | `POST` | `/chats/{chatId}` | Send message, stream response |
 | `GET` | `/chats` | Chat list |
 | `GET` | `/chats/{chatId}/messages` | Message history |
+
