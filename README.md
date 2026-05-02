@@ -2,6 +2,14 @@
 
 A self-hosted, multi-provider LLM chat app. Users sign in with Google, store their own API keys per provider, and chat with models from OpenAI, Anthropic, Google, and Mistral via SSE streaming.
 
+<img width="2560" height="1440" alt="Screenshot 2026-05-02 100429" src="https://github.com/user-attachments/assets/41cb9657-48ae-4d28-aecb-f7f62660d522" />
+<br/>
+<img width="2560" height="1440" alt="Screenshot 2026-05-02 100450" src="https://github.com/user-attachments/assets/57d7646b-7477-42d1-9299-9143aed9acde" />
+<br/>
+<img width="2560" height="1440" alt="Screenshot 2026-05-02 100456" src="https://github.com/user-attachments/assets/2fef03fd-3d35-45ba-8dea-01cd3d1dbacd" />
+<br/>
+<img width="2560" height="1440" alt="Screenshot 2026-05-02 100711" src="https://github.com/user-attachments/assets/9832190d-fbbc-47cd-a39b-a324fd6d8cd5" />
+
 ## Features
 
 - Google OAuth sign-in
