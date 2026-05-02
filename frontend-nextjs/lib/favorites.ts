@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-const FAVORITES_KEY = "nick-chat:favorite-models";
+const FAVORITES_KEY = "all-chat:favorite-models";
 const EMPTY: string[] = [];
 
 function read(): string[] {

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-const RECENT_KEY = "nick-chat:recent-models";
+const RECENT_KEY = "all-chat:recent-models";
 const MAX_RECENT = 5;
 const EMPTY: string[] = [];
 

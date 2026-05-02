@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>dev.nicktriano</groupId>
-	<artifactId>model-selector-demo</artifactId>
+	<artifactId>all-chat</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>

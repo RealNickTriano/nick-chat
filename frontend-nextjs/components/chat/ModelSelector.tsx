@@ -8,7 +8,7 @@ import { ModelDropdown } from "./ModelDropdown";
 import { ModelSelectionModal } from "./ModelSelectionModal";
 import { ModelSelectorButton } from "./ModelSelectorButton";
 
-const STORAGE_KEY = "nick-chat:selected-model";
+const STORAGE_KEY = "all-chat:selected-model";
 
 interface ModelSelectorProps {
   value: string | null;
